@@ -192,12 +192,7 @@ export function AgentChat({
             <LiveScreenshotStream agentId={agent.id} width={640} height={400} />
           </div>
         )}
-        
-        {/* Debug: Always show live stream for testing */}
-        <div className="p-4 border-b bg-blue-50">
-          <div className="text-sm font-medium mb-2 text-blue-700">Debug: Live Stream (Agent {agent.id})</div>
-          <LiveScreenshotStream agentId={agent.id} width={640} height={400} />
-        </div>
+
         
         <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
           <div className="space-y-4 pb-4">

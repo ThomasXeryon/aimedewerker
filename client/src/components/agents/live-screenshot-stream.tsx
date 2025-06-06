@@ -15,46 +15,34 @@ export function LiveScreenshotStream({
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/api/ws/screenshots`;
-    console.log(`Attempting WebSocket connection to: ${wsUrl}`);
-    const socket = new WebSocket(wsUrl);
-
-    socket.onopen = () => {
-      console.log('WebSocket connected for live screenshots');
+    console.log(`Setting up SSE connection for agent ${agentId}`);
+    const eventSource = new EventSource(`/api/events/${agentId}`);
+    
+    eventSource.onopen = () => {
+      console.log('SSE connected for live screenshots');
       setIsConnected(true);
-      // Subscribe to screenshots for this agent
-      socket.send(JSON.stringify({ 
-        type: 'subscribe', 
-        agentId: agentId 
-      }));
-      console.log(`Subscribed to screenshots for agent ${agentId}`);
     };
 
-    socket.onmessage = (event) => {
+    eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'screenshot' && data.data) {
-          console.log('📸 Received screenshot from WebSocket');
-          setFrame("data:image/png;base64," + data.data);
+        if (data.type === 'agent_screenshot' && data.screenshot) {
+          console.log('Received screenshot from SSE');
+          setFrame("data:image/png;base64," + data.screenshot);
         }
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-        // Fallback: try treating as raw base64 data
-        setFrame("data:image/png;base64," + event.data);
+        console.error('Error parsing SSE message:', error);
       }
     };
 
-    socket.onerror = (err) => {
-      console.error("❌ WebSocket error:", err);
+    eventSource.onerror = (err) => {
+      console.error("SSE error:", err);
       setIsConnected(false);
     };
 
-    socket.onclose = () => {
-      setIsConnected(false);
+    return () => {
+      eventSource.close();
     };
-
-    return () => socket.close();
   }, [agentId]);
 
   return (
