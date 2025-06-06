@@ -129,6 +129,9 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Edit Agent: {agent.name}</DialogTitle>
+          <DialogDescription>
+            Update the agent's configuration and settings.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
