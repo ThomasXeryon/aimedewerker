@@ -55,7 +55,6 @@ export function AgentChat({
       
       eventSource.onopen = () => {
         console.log('Event stream connected for agent', agent.id);
-        setIsConnected(true);
       };
       
       eventSource.onmessage = (event) => {
@@ -100,7 +99,6 @@ export function AgentChat({
       
       eventSource.onerror = () => {
         console.log('Event stream error, reconnecting...');
-        setIsConnected(false);
         eventSource?.close();
         setTimeout(startEventStream, 3000);
       };
@@ -110,7 +108,6 @@ export function AgentChat({
     
     return () => {
       eventSource?.close();
-      setIsConnected(false);
     };
   }, [agent.id]);
 
