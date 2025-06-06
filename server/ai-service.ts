@@ -17,6 +17,7 @@ interface ComputerAction {
   keys?: string[];
   scroll_x?: number;
   scroll_y?: number;
+  duration?: number;
 }
 
 interface ExecutionContext {
@@ -116,36 +117,39 @@ class AIService {
     context.screenshots.push(screenshot);
 
     try {
-      // Use OpenAI Computer Use API with direct fetch
+      // Use OpenAI Computer Use API matching the exact Python example format
       const computerUseResponse = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'api-version': 'preview'
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
           model: "computer-use-preview",
-          input: [{
-            type: "message",
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Complete this task: ${agent.instructions}`
-              },
-              {
-                type: "input_image", 
-                image_url: `data:image/png;base64,${screenshot}`
-              }
-            ]
-          }],
           tools: [{
             type: "computer_use_preview",
             display_width: 1024,
             display_height: 768,
             environment: "browser"
           }],
+          input: [{
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Complete this task: ${agent.instructions}`
+              },
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: screenshot
+                }
+              }
+            ]
+          }],
+          reasoning: { summary: "concise" },
           truncation: "auto"
         })
       });
@@ -325,52 +329,55 @@ class AIService {
         messages: [
           {
             role: "system",
-            content: `You are an expert browser automation specialist. Your mission: ${agent.instructions}
+            content: `You are an expert browser automation agent with precise computer vision. Your task: ${agent.instructions}
 
-            CONTEXT:
-            - Agent: ${agent.type}
-            - Target: ${agent.targetWebsite || 'web interface'}
+            COORDINATE PRECISION CRITICAL:
+            - Study the screenshot pixel-by-pixel to identify exact element locations
+            - Click in the CENTER of buttons, links, and form fields
+            - Account for visual padding, borders, and element spacing
+            - Viewport is 1024x768 - ensure all coordinates fit within bounds
+            - For text fields: click in the middle of the input area
+            - For buttons: click dead center of the button text/area
             
-            AVAILABLE ACTIONS:
-            • click(x, y) - Click precise coordinates
-            • type(text) - Enter text in focused fields
-            • scroll(x, y, scroll_x, scroll_y) - Scroll page sections
-            • keypress(keys) - Keyboard shortcuts
-            • wait() - Pause for loading
+            VISUAL ANALYSIS PROCESS:
+            1. Scan entire screenshot from top-left to bottom-right
+            2. Identify ALL clickable elements: buttons, links, inputs, dropdowns
+            3. Read all visible text, labels, error messages, success indicators
+            4. Determine current page state and required next action
+            5. Calculate EXACT pixel coordinates for the target element
             
-            STRATEGY:
-            1. Examine screenshot systematically
-            2. Identify key interactive elements
-            3. Choose most direct path to goal
-            4. Use precise coordinates for reliability
-            5. Complete forms methodically
-            6. Verify success after each action
+            ACTION TYPES:
+            • click - Click exact pixel coordinates (x, y)
+            • type - Type text in currently focused field
+            • scroll - Scroll page (scroll_x, scroll_y values)
+            • keypress - Press keyboard keys (Enter, Tab, Space, etc.)
+            • wait - Pause for page loading (duration in ms)
             
-            IMPORTANT:
-            - Be extremely precise with coordinates
-            - Look for form fields, buttons, links, dropdowns
-            - Read error messages and success indicators
-            - Navigate step-by-step toward task completion
-            - If stuck, try scrolling or waiting for page loads
+            COORDINATE CALCULATION:
+            - Measure element boundaries visually in the screenshot
+            - Find the center point of the target element
+            - Verify coordinates are reasonable for 1024x768 viewport
+            - Avoid edges and borders - aim for element center
             
-            RESPOND WITH VALID JSON:
+            RESPOND WITH VALID JSON ONLY:
             {
               "action": {
                 "type": "click|type|scroll|keypress|wait",
-                "x": number,
-                "y": number,
-                "text": "exact text",
-                "keys": ["Enter", "Tab"],
-                "scroll_x": 0,
-                "scroll_y": 300
+                "x": exact_pixel_number,
+                "y": exact_pixel_number,
+                "text": "exact text to type",
+                "keys": ["Enter", "Tab", "Space"],
+                "scroll_x": horizontal_scroll_pixels,
+                "scroll_y": vertical_scroll_pixels,
+                "duration": milliseconds_to_wait
               },
-              "reasoning": "Why this action advances the task"
+              "reasoning": "Specific explanation of why these exact coordinates and action will advance the task"
             }
             
-            TASK COMPLETE FORMAT:
+            COMPLETION FORMAT:
             {
               "complete": true,
-              "summary": "Successfully completed task"
+              "summary": "Task completed successfully with specific outcome details"
             }`
           },
           {
@@ -416,52 +423,79 @@ class AIService {
   private async executeAction(page: any, action: ComputerAction): Promise<void> {
     console.log('Executing action:', action);
 
-    switch (action.type) {
-      case 'click':
-        if (action.x && action.y) {
-          await page.mouse.click(action.x, action.y, { 
-            button: action.button || 'left' 
-          });
-        }
-        break;
+    try {
+      switch (action.type) {
+        case 'click':
+          if (typeof action.x === 'number' && typeof action.y === 'number') {
+            // Ensure coordinates are within viewport bounds
+            const viewport = page.viewportSize();
+            const x = Math.max(0, Math.min(action.x, viewport.width - 1));
+            const y = Math.max(0, Math.min(action.y, viewport.height - 1));
+            
+            console.log(`Clicking at coordinates: (${x}, ${y})`);
+            await page.mouse.click(x, y, { 
+              button: action.button || 'left',
+              delay: 100 // Add small delay for better reliability
+            });
+          } else {
+            console.warn('Invalid click coordinates:', action.x, action.y);
+          }
+          break;
 
-      case 'type':
-        if (action.text) {
-          await page.keyboard.type(action.text);
-        }
-        break;
+        case 'type':
+          if (action.text) {
+            // Clear any existing text first
+            await page.keyboard.selectAll();
+            await page.keyboard.press('Delete');
+            await page.keyboard.type(action.text, { delay: 50 });
+          }
+          break;
 
-      case 'scroll':
-        if (action.x && action.y && action.scroll_x !== undefined && action.scroll_y !== undefined) {
-          await page.mouse.move(action.x, action.y);
-          await page.evaluate(`window.scrollBy(${action.scroll_x}, ${action.scroll_y})`);
-        }
-        break;
+        case 'scroll':
+          if (typeof action.scroll_x === 'number' && typeof action.scroll_y === 'number') {
+            console.log(`Scrolling by: (${action.scroll_x}, ${action.scroll_y})`);
+            await page.evaluate(`window.scrollBy(${action.scroll_x}, ${action.scroll_y})`);
+          }
+          break;
 
-      case 'keypress':
-        if (action.keys) {
-          for (const key of action.keys) {
-            if (key.toLowerCase() === 'enter') {
-              await page.keyboard.press('Enter');
-            } else if (key.toLowerCase() === 'space') {
-              await page.keyboard.press(' ');
-            } else {
-              await page.keyboard.press(key);
+        case 'keypress':
+          if (action.keys && Array.isArray(action.keys)) {
+            for (const key of action.keys) {
+              const keyStr = key.toString();
+              if (keyStr.toLowerCase() === 'enter') {
+                await page.keyboard.press('Enter');
+              } else if (keyStr.toLowerCase() === 'tab') {
+                await page.keyboard.press('Tab');
+              } else if (keyStr.toLowerCase() === 'space') {
+                await page.keyboard.press('Space');
+              } else {
+                await page.keyboard.press(keyStr);
+              }
+              await page.waitForTimeout(100);
             }
           }
-        }
-        break;
+          break;
 
-      case 'wait':
-        await page.waitForTimeout(2000);
-        break;
+        case 'wait':
+          const waitTime = action.duration || 2000;
+          console.log(`Waiting for ${waitTime}ms`);
+          await page.waitForTimeout(waitTime);
+          break;
 
-      case 'screenshot':
-        // Screenshot is taken automatically after each action
-        break;
+        case 'screenshot':
+          // Screenshot is taken automatically after each action
+          break;
 
-      default:
-        console.warn('Unknown action type:', action.type);
+        default:
+          console.warn('Unknown action type:', action.type);
+      }
+
+      // Wait a bit after each action for stability
+      await page.waitForTimeout(500);
+
+    } catch (error) {
+      console.error('Error executing action:', error);
+      throw error;
     }
   }
 
