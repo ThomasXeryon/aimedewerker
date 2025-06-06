@@ -116,7 +116,7 @@ class AIService {
     context.screenshots.push(screenshot);
 
     try {
-      // Use OpenAI Computer Use API
+      // Use OpenAI Computer Use API with responses.create
       let response = await openai.responses.create({
         model: "computer-use-preview",
         tools: [{
@@ -125,27 +125,25 @@ class AIService {
           display_height: 768,
           environment: "browser"
         }],
-        input: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Complete this task: ${agent.instructions}
-                
-                Agent Type: ${agent.type}
-                Target Website: ${agent.targetWebsite || 'any website'}
-                
-                Use the computer to navigate, click, type, and complete the specified task.`
-              },
-              {
-                type: "input_image",
-                image_url: `data:image/png;base64,${screenshot}`,
-                detail: "high"
-              }
-            ]
-          }
-        ],
+        input: [{
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: `Complete this task: ${agent.instructions}
+              
+              Target: ${agent.targetWebsite || 'web interface'}
+              Agent Type: ${agent.type}
+              
+              Use the computer to navigate, click, type, and complete the specified task.`
+            },
+            {
+              type: "input_image",
+              image_url: `data:image/png;base64,${screenshot}`,
+              detail: "high"
+            }
+          ]
+        }],
         reasoning: {
           summary: "concise"
         },
@@ -154,11 +152,13 @@ class AIService {
 
       await this.processComputerUseResponse(context, response, screenshot);
     } catch (error) {
-      console.log('OpenAI Computer Use API not available, using fallback vision processing');
+      console.log('OpenAI Computer Use API not available, using enhanced vision processing');
       let response = await this.processTaskWithVision(agent, screenshot);
       await this.processLegacyResponse(context, response, screenshot);
     }
   }
+
+
 
   private async processComputerUseResponse(context: ExecutionContext, response: any, screenshot: string): Promise<void> {
     const { page } = context;

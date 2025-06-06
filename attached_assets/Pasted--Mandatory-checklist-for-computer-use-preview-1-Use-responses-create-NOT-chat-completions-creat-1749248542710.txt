@@ -1,0 +1,103 @@
+✅ Mandatory checklist for computer-use-preview
+1. ✅ Use responses.create, NOT chat.completions.create
+You must call:
+
+python
+Copy
+Edit
+client.responses.create(...)
+The computer-use-preview model only works with responses.create, not chat.completions.create.
+
+2. ✅ Set tools=[{"type": "computer_use_preview", ...}]
+You must explicitly define the tool like this:
+
+python
+Copy
+Edit
+tools=[{
+    "type": "computer_use_preview",
+    "display_width": 1024,
+    "display_height": 768,
+    "environment": "browser"  # or "windows", "mac", "ubuntu"
+}]
+If you forget this or pass an empty list, OpenAI falls back to a default GPT-4o response model.
+
+3. ✅ Set model="computer-use-preview" exactly
+No aliases, no fallback string. Must be:
+
+python
+Copy
+Edit
+model="computer-use-preview"
+If you use "gpt-4o" or just "gpt-4", it will never engage the CUA tooling.
+
+4. ✅ Enable truncation="auto"
+This parameter is required:
+
+python
+Copy
+Edit
+truncation="auto"
+5. ✅ Pass input=[{"role": "user", "content": [...] }] properly
+Example:
+
+python
+Copy
+Edit
+input=[
+    {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Go to bing.com and search for OpenAI news"}
+        ]
+    }
+]
+Make sure type: "text" is used — don't just pass plain strings.
+
+❌ Common mistakes that break the flow:
+Mistake	Effect
+Using chat.completions.create()	The model never invokes computer_use_preview, falls back
+Using gpt-4o instead of computer-use-preview	Tooling is unavailable, it responds like chat
+Missing "tools" array or wrong "type"	No tool gets invoked, it answers textually
+Passing raw string instead of structured input	Model can’t determine instruction format
+Not including truncation="auto"	API will reject the request
+
+🔍 Debug tip
+Enable logging or print the model used in response:
+
+python
+Copy
+Edit
+print(response.model)  # Should be 'computer-use-preview'
+Or inspect the entire raw response to confirm the model and see if computer_call shows up.
+
+✅ Correct minimal example
+python
+Copy
+Edit
+from openai import OpenAI
+client = OpenAI()
+
+response = client.responses.create(
+    model="computer-use-preview",
+    tools=[{
+        "type": "computer_use_preview",
+        "display_width": 1024,
+        "display_height": 768,
+        "environment": "browser"
+    }],
+    input=[{
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "Go to bing.com and search for OpenAI news."
+            }
+        ]
+    }],
+    reasoning={"summary": "concise"},
+    truncation="auto"
+)
+
+print(response.output)
+If all this is set correctly and it still falls back, send me your actual request payload (minus your API key) and I’ll pinpoint the issue line-by-line.
