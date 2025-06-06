@@ -143,7 +143,7 @@ class AIService {
               },
               {
                 type: "input_image",
-                source: {
+                input_image: {
                   type: "base64",
                   media_type: "image/png",
                   data: screenshot
