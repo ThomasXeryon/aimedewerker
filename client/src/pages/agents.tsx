@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateAgentModal } from "@/components/agents/create-agent-modal";
-import { EditAgentModal } from "@/components/agents/edit-agent-modal";
+import { EditAgentModal } from "@/components/agents/edit-agent-modal-simple";
 import { AgentChat } from "@/components/agents/agent-chat-fixed";
 import { Plus, Bot, Play, Pause, Square, Eye, Calendar, Edit } from "lucide-react";
 import { Agent, TaskExecution } from "@shared/schema";
@@ -21,7 +21,7 @@ export default function Agents() {
   const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null);
   const { toast } = useToast();
 
-  console.log('Agents component state:', { editModalOpen, editingAgent: editingAgent?.name });
+
 
   const { data: agents = [], isLoading } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],

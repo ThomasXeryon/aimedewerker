@@ -122,11 +122,13 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     updateAgentMutation.mutate(data);
   };
 
+  if (!open || !agent) return null;
+
   return (
-    <Dialog open={open && !!agent} onOpenChange={onOpenChange}>
+    <Dialog open={true} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Edit Agent</DialogTitle>
+          <DialogTitle>Edit Agent: {agent.name}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
