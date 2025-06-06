@@ -6,14 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateAgentModal } from "@/components/agents/create-agent-modal";
+import { EditAgentModal } from "@/components/agents/edit-agent-modal";
 import { AgentChat } from "@/components/agents/agent-chat-fixed";
-import { Plus, Bot, Play, Pause, Square, Eye, Calendar } from "lucide-react";
+import { Plus, Bot, Play, Pause, Square, Eye, Calendar, Edit } from "lucide-react";
 import { Agent, TaskExecution } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Agents() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null);
   const { toast } = useToast();

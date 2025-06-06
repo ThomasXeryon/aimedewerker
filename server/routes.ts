@@ -111,6 +111,26 @@ export function registerRoutes(app: Express): Server {
     res.json(updatedAgent);
   });
 
+  app.patch("/api/agents/:id", checkOrganizationAccess, async (req, res) => {
+    const agentId = parseInt(req.params.id);
+    const agent = await storage.getAgent(agentId);
+    
+    if (!agent || agent.organizationId !== req.user!.organizationId) {
+      return res.sendStatus(404);
+    }
+    
+    // Handle framerate in config
+    const updates = { ...req.body };
+    if (updates.framerate !== undefined) {
+      const currentConfig = agent.config || {};
+      updates.config = { ...currentConfig, framerate: updates.framerate };
+      delete updates.framerate;
+    }
+    
+    const updatedAgent = await storage.updateAgent(agentId, updates);
+    res.json(updatedAgent);
+  });
+
   app.delete("/api/agents/:id", checkOrganizationAccess, async (req, res) => {
     const agentId = parseInt(req.params.id);
     const agent = await storage.getAgent(agentId);
