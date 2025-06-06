@@ -125,7 +125,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
   if (!open || !agent) return null;
 
   return (
-    <Dialog open={true} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Edit Agent: {agent.name}</DialogTitle>
