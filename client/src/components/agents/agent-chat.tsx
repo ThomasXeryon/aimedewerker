@@ -50,7 +50,45 @@ export function AgentChat({
   useEffect(() => {
     if (!socket) return;
 
-    const handleMessage = (data: any) => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('WebSocket message received:', message);
+        
+        if (message.type === 'update' && message.data) {
+          const { type: updateType, action, screenshot, agentId, executionId } = message.data;
+          
+          // Only show updates for the current agent
+          if (agentId && agentId !== agent.id) return;
+          
+          switch (updateType) {
+            case 'agent_action':
+              setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                type: "agent",
+                content: `Executing: ${action.type}${action.x ? ` at (${action.x}, ${action.y})` : ''}${action.text ? ` - "${action.text}"` : ''}`,
+                timestamp: new Date(),
+                action: action
+              }]);
+              break;
+
+            case 'agent_screenshot':
+              setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                type: "screenshot",
+                content: "Browser screenshot",
+                timestamp: new Date(),
+                screenshot: screenshot
+              }]);
+              break;
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    const handleLegacyMessage = (data: any) => {
       const { type, payload } = JSON.parse(data);
       
       switch (type) {

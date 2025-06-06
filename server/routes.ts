@@ -309,6 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Broadcast updates to WebSocket clients
   const broadcastUpdate = (organizationId: number, data: any) => {
+    console.log('Broadcasting update:', data.type, 'to', wss.clients.size, 'clients');
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         // In a real implementation, check if client belongs to the organization
@@ -320,6 +321,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   };
+
+  // Export broadcast function for use in other modules
+  global.broadcastUpdate = broadcastUpdate;
 
   return httpServer;
 }

@@ -91,10 +91,9 @@ class AIService {
       viewport: { width: 1024, height: 768 },
     });
 
-    // Navigate to target website if specified
-    if (agent.targetWebsite) {
-      await page.goto(agent.targetWebsite);
-    }
+    // Navigate to target website if specified, otherwise start with a demo page
+    const targetUrl = agent.targetWebsite || 'https://example.com';
+    await page.goto(targetUrl);
 
     const context: ExecutionContext = {
       agent,
@@ -295,14 +294,9 @@ class AIService {
   }
 
   private broadcastUpdate(organizationId: number, data: any): void {
-    // Import and use WebSocket broadcast functionality
-    const { broadcast } = require('./routes');
-    if (broadcast) {
-      broadcast({
-        type: 'update',
-        organizationId,
-        data
-      });
+    // Use global broadcast function
+    if (global.broadcastUpdate) {
+      global.broadcastUpdate(organizationId, data);
     }
   }
 
