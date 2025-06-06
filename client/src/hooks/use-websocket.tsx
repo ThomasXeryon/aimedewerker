@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface WebSocketContextType {
@@ -14,7 +14,8 @@ const WebSocketContext = createContext<WebSocketContextType>({
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
   const queryClient = useQueryClient();
-  const isConnectedRef = useRef(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -26,7 +27,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
       socket.onopen = () => {
         console.log("WebSocket connected");
-        isConnectedRef.current = true;
+        setIsConnected(true);
+        
+        // Clear any pending reconnection attempts
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
         
         // Authenticate the connection
         socket.send(JSON.stringify({
@@ -74,15 +80,15 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
       socket.onclose = (event) => {
         console.log("WebSocket disconnected:", event.code, event.reason);
-        isConnectedRef.current = false;
+        setIsConnected(false);
         
         // Attempt to reconnect after a delay
-        setTimeout(() => {
-          if (!isConnectedRef.current) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (!isConnected) {
             console.log("Attempting to reconnect WebSocket...");
             connect();
           }
-        }, 5000);
+        }, 3000);
       };
 
       socket.onerror = (error) => {
@@ -93,10 +99,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     connect();
 
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
-        isConnectedRef.current = false;
+        setIsConnected(false);
       }
     };
   }, [queryClient]);
@@ -105,7 +114,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     <WebSocketContext.Provider
       value={{
         socket: socketRef.current,
-        isConnected: isConnectedRef.current,
+        isConnected: isConnected,
       }}
     >
       {children}
