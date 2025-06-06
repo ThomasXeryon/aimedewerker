@@ -53,45 +53,32 @@ export function AgentChat({
     const handleMessage = (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data);
-        console.log('Agent chat received WebSocket message:', message);
+        console.log('WebSocket message received in agent chat:', message);
         
         if (message.type === 'update' && message.data) {
-          const { type: updateType, action, screenshot, agentId, executionId } = message.data;
-          console.log('Processing update:', updateType, 'for agent:', agentId, 'current agent:', agent.id);
+          const { type: updateType, action, screenshot, agentId } = message.data;
           
           // Only show updates for the current agent
           if (agentId && agentId !== agent.id) return;
           
           switch (updateType) {
             case 'agent_action':
-              console.log('Adding action message:', action);
               setMessages(prev => [...prev, {
                 id: `action-${Date.now()}`,
                 type: "agent",
-                content: `🤖 ${action.type}${action.x ? ` at (${action.x}, ${action.y})` : ''}${action.text ? ` - "${action.text}"` : ''}`,
+                content: `${action.type}${action.x ? ` at (${action.x}, ${action.y})` : ''}${action.text ? ` - "${action.text}"` : ''}`,
                 timestamp: new Date(),
                 action: action
               }]);
               break;
 
             case 'agent_screenshot':
-              console.log('Adding screenshot message');
               setMessages(prev => [...prev, {
                 id: `screenshot-${Date.now()}`,
                 type: "screenshot",
-                content: "📸 Browser view",
+                content: "Browser view",
                 timestamp: new Date(),
                 screenshot: screenshot
-              }]);
-              break;
-
-            case 'agent_reasoning':
-              console.log('Adding reasoning message');
-              setMessages(prev => [...prev, {
-                id: `reasoning-${Date.now()}`,
-                type: "agent",
-                content: `💭 ${message.data.reasoning}`,
-                timestamp: new Date()
               }]);
               break;
           }
@@ -237,12 +224,21 @@ export function AgentChat({
               setTimeout(() => {
                 setMessages(prev => [...prev, {
                   id: `demo-screenshot-${Date.now()}`,
-                  type: "screenshot",
-                  content: "📸 Browser view after action",
+                  type: "screenshot", 
+                  content: "Browser view after action",
                   timestamp: new Date(),
-                  screenshot: "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                  screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAKRJREFUKJGt0jEOgjAYBOAfLAytjfGBJsbCRBujhYUJJj6AxsdgY2KCiYW1sSGx8AGMBxALayssLKwtLCwsrC0sLKwtraxtbGwsLKwsLCwsLKwtrawtLCwsLKwsLCwsLKwsLCwsLCwsLCwsLCwsrK0srK0tLKysLSysLaysLSysrCysLaysLSysrCysLaysrSysLaysLSysrCysrK0srK0trCysrCys"
                 }]);
               }, 2500);
+              
+              setTimeout(() => {
+                setMessages(prev => [...prev, {
+                  id: `demo-complete-${Date.now()}`,
+                  type: "system",
+                  content: "Task completed successfully",
+                  timestamp: new Date()
+                }]);
+              }, 3500);
               
               onStartExecution();
             }} size="sm">

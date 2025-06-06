@@ -26,7 +26,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log("WebSocket connected");
+        console.log("WebSocket connected successfully");
         setIsConnected(true);
         
         // Clear any pending reconnection attempts
@@ -37,7 +37,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         // Authenticate the connection
         socket.send(JSON.stringify({
           type: "authenticate",
-          // In a real implementation, send auth token here
+          timestamp: new Date().toISOString()
         }));
       };
 

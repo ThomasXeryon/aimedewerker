@@ -294,9 +294,10 @@ class AIService {
   }
 
   private broadcastUpdate(organizationId: number, data: any): void {
+    console.log('AI Service broadcasting:', data.type, 'for agent:', data.agentId);
     // Use global broadcast function
-    if (global.broadcastUpdate) {
-      global.broadcastUpdate(organizationId, data);
+    if ((global as any).broadcastUpdate) {
+      (global as any).broadcastUpdate(organizationId, data);
     }
   }
 
