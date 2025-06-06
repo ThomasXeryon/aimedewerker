@@ -339,6 +339,7 @@ export function registerRoutes(app: Express): Server {
   // Simple event stream for real-time updates
   app.get('/api/events/:agentId', (req, res) => {
     const agentId = parseInt(req.params.agentId);
+    console.log(`Event stream requested for agent: ${agentId}`);
     
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -350,18 +351,37 @@ export function registerRoutes(app: Express): Server {
 
     // Send initial connection event
     res.write('data: {"type":"connected","agentId":' + agentId + '}\n\n');
+    console.log(`Sent connection event for agent: ${agentId}`);
 
     // Store the response object for this agent
-    if (!global.eventStreams) {
-      global.eventStreams = new Map();
+    if (!(global as any).eventStreams) {
+      (global as any).eventStreams = new Map();
     }
-    global.eventStreams.set(agentId, res);
+    (global as any).eventStreams.set(agentId, res);
 
-
+    // Send keepalive every 30 seconds
+    const keepAliveInterval = setInterval(() => {
+      try {
+        res.write('data: {"type":"keepalive"}\n\n');
+      } catch (error) {
+        clearInterval(keepAliveInterval);
+        (global as any).eventStreams?.delete(agentId);
+      }
+    }, 30000);
 
     req.on('close', () => {
-      if (global.eventStreams) {
-        global.eventStreams.delete(agentId);
+      console.log(`Event stream closed for agent: ${agentId}`);
+      clearInterval(keepAliveInterval);
+      if ((global as any).eventStreams) {
+        (global as any).eventStreams.delete(agentId);
+      }
+    });
+
+    req.on('error', () => {
+      console.log(`Event stream error for agent: ${agentId}`);
+      clearInterval(keepAliveInterval);
+      if ((global as any).eventStreams) {
+        (global as any).eventStreams.delete(agentId);
       }
     });
   });

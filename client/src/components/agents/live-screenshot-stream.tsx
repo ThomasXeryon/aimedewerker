@@ -35,6 +35,7 @@ export function LiveScreenshotStream({
         if (data.type === 'agent_screenshot' && data.screenshot) {
           console.log(`[LiveStream] Screenshot received, length: ${data.screenshot.length}`);
           setFrame("data:image/png;base64," + data.screenshot);
+          setLastUpdate(Date.now());
         } else if (data.type === 'connected') {
           console.log(`[LiveStream] Initial connection confirmed for agent ${data.agentId}`);
         }

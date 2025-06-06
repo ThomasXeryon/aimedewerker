@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { z } from "zod";
 import {
   Dialog,
@@ -54,6 +55,19 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     },
   });
 
+  // Reset form when agent changes
+  useEffect(() => {
+    if (agent) {
+      form.reset({
+        name: agent.name || "",
+        description: agent.description || "",
+        instructions: agent.instructions || "",
+        priority: agent.priority || "normal",
+        framerate: (agent as any)?.config?.framerate || 2,
+      });
+    }
+  }, [agent, form]);
+
   const updateAgentMutation = useMutation({
     mutationFn: async (data: EditAgentData) => {
       if (!agent) throw new Error("No agent to update");
@@ -79,6 +93,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
   });
 
   const onSubmit = (data: EditAgentData) => {
+    console.log('Submitting agent update:', data);
     updateAgentMutation.mutate(data);
   };
 
@@ -113,7 +128,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="Brief description" {...field} value={field.value || ""} />
+                    <Input placeholder="Brief description" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
