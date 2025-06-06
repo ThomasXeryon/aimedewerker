@@ -21,6 +21,8 @@ export default function Agents() {
   const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null);
   const { toast } = useToast();
 
+  console.log('Agents component state:', { editModalOpen, editingAgent: editingAgent?.name });
+
   const { data: agents = [], isLoading } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],
   });
@@ -129,7 +131,10 @@ export default function Agents() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Edit button clicked for agent:', selectedAgent);
                         setEditingAgent(selectedAgent);
                         setEditModalOpen(true);
                       }}

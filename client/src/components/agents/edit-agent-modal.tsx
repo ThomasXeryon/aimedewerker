@@ -43,6 +43,12 @@ interface EditAgentModalProps {
 
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
+  
+  console.log('EditAgentModal rendered:', { open, agent: agent?.name });
+  
+  useEffect(() => {
+    console.log('EditAgentModal useEffect:', { open, agent: agent?.name });
+  }, [open, agent]);
 
   const form = useForm<EditAgentData>({
     resolver: zodResolver(editAgentSchema),
