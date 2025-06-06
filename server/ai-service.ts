@@ -131,15 +131,12 @@ class AIService {
             role: "user",
             content: [
               {
-                type: "text",
+                type: "input_text",
                 text: `Complete this task: ${agent.instructions}`
               },
               {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/png;base64,${screenshot}`,
-                  detail: "high"
-                }
+                type: "input_image", 
+                image_url: `data:image/png;base64,${screenshot}`
               }
             ]
           }],
