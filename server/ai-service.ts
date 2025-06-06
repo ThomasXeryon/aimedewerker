@@ -109,90 +109,32 @@ class AIService {
     let screenshot = await this.takeScreenshot(page);
     context.screenshots.push(screenshot);
 
+    // For now, use a simplified approach until the Computer Use API is fully available
+    // This implements the core computer automation logic manually
+    let response = await this.processTaskWithVision(agent, screenshot);
+
     while (iteration < maxIterations) {
       iteration++;
 
       try {
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: `You are an AI agent that controls a web browser to complete tasks. 
-              
-              Agent Type: ${agent.type}
-              Instructions: ${agent.instructions}
-              
-              You can perform these actions:
-              - click(x, y, button="left") - Click at coordinates
-              - type(text) - Type text
-              - scroll(x, y, scroll_x, scroll_y) - Scroll at coordinates
-              - keypress(keys) - Press keyboard keys
-              - wait() - Wait briefly
-              - screenshot() - Take a screenshot
-              
-              Analyze the current screenshot and determine the next action to complete the task.
-              If the task is complete, respond with "TASK_COMPLETE".
-              
-              Respond with JSON in this format:
-              {
-                "action": {
-                  "type": "click|type|scroll|keypress|wait|screenshot",
-                  "x": number,
-                  "y": number,
-                  "button": "left|right",
-                  "text": "text to type",
-                  "keys": ["key1", "key2"],
-                  "scroll_x": number,
-                  "scroll_y": number
-                },
-                "reasoning": "Explanation of why this action is needed"
-              }
-              
-              Or if complete:
-              {
-                "complete": true,
-                "summary": "Task completion summary"
-              }`
-            },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Current screenshot of the browser. What action should I take next?"
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:image/png;base64,${screenshot}`
-                  }
-                }
-              ]
-            }
-          ],
-          response_format: { type: "json_object" },
-          max_tokens: 1000,
-        });
-
-        const result = JSON.parse(response.choices[0].message.content || '{}');
-
-        if (result.complete) {
-          console.log('Task completed:', result.summary);
+        if (!response.action) {
+          console.log('No action in response. Task may be complete.');
           break;
         }
 
-        if (result.action) {
-          await this.executeAction(page, result.action);
-          context.actions.push(result.action);
+        console.log('Executing action:', response.action);
+        await this.executeAction(page, response.action);
+        context.actions.push(response.action);
 
-          // Take screenshot after action
-          screenshot = await this.takeScreenshot(page);
-          context.screenshots.push(screenshot);
+        // Take screenshot after action
+        screenshot = await this.takeScreenshot(page);
+        context.screenshots.push(screenshot);
 
-          // Wait briefly between actions
-          await page.waitForTimeout(1000);
-        }
+        // Wait briefly between actions
+        await page.waitForTimeout(1000);
+
+        // Get next action based on new screenshot
+        response = await this.processTaskWithVision(agent, screenshot);
 
       } catch (error) {
         console.error('Error in computer use loop:', error);
@@ -202,6 +144,78 @@ class AIService {
 
     if (iteration >= maxIterations) {
       throw new Error('Maximum iterations reached without task completion');
+    }
+  }
+
+  private async processTaskWithVision(agent: Agent, screenshot: string): Promise<{action?: ComputerAction, complete?: boolean}> {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are an AI agent that controls a web browser to complete tasks. 
+            
+            Agent Type: ${agent.type}
+            Instructions: ${agent.instructions}
+            
+            You can perform these actions:
+            - click(x, y, button="left") - Click at coordinates
+            - type(text) - Type text
+            - scroll(x, y, scroll_x, scroll_y) - Scroll at coordinates
+            - keypress(keys) - Press keyboard keys
+            - wait() - Wait briefly
+            - screenshot() - Take a screenshot
+            
+            Analyze the current screenshot and determine the next action to complete the task.
+            If the task is complete, respond with "TASK_COMPLETE".
+            
+            Respond with JSON in this format:
+            {
+              "action": {
+                "type": "click|type|scroll|keypress|wait|screenshot",
+                "x": number,
+                "y": number,
+                "button": "left|right",
+                "text": "text to type",
+                "keys": ["key1", "key2"],
+                "scroll_x": number,
+                "scroll_y": number
+              },
+              "reasoning": "Explanation of why this action is needed"
+            }
+            
+            Or if complete:
+            {
+              "complete": true,
+              "summary": "Task completion summary"
+            }`
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Current screenshot of the browser. What action should I take next?"
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/png;base64,${screenshot}`
+                }
+              }
+            ]
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 1000,
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      return result;
+    } catch (error) {
+      console.error('Error in vision processing:', error);
+      throw error;
     }
   }
 
