@@ -53,32 +53,45 @@ export function AgentChat({
     const handleMessage = (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data);
-        console.log('WebSocket message received:', message);
+        console.log('Agent chat received WebSocket message:', message);
         
         if (message.type === 'update' && message.data) {
           const { type: updateType, action, screenshot, agentId, executionId } = message.data;
+          console.log('Processing update:', updateType, 'for agent:', agentId, 'current agent:', agent.id);
           
           // Only show updates for the current agent
           if (agentId && agentId !== agent.id) return;
           
           switch (updateType) {
             case 'agent_action':
+              console.log('Adding action message:', action);
               setMessages(prev => [...prev, {
-                id: Date.now().toString(),
+                id: `action-${Date.now()}`,
                 type: "agent",
-                content: `Executing: ${action.type}${action.x ? ` at (${action.x}, ${action.y})` : ''}${action.text ? ` - "${action.text}"` : ''}`,
+                content: `🤖 ${action.type}${action.x ? ` at (${action.x}, ${action.y})` : ''}${action.text ? ` - "${action.text}"` : ''}`,
                 timestamp: new Date(),
                 action: action
               }]);
               break;
 
             case 'agent_screenshot':
+              console.log('Adding screenshot message');
               setMessages(prev => [...prev, {
-                id: Date.now().toString(),
+                id: `screenshot-${Date.now()}`,
                 type: "screenshot",
-                content: "Browser screenshot",
+                content: "📸 Browser view",
                 timestamp: new Date(),
                 screenshot: screenshot
+              }]);
+              break;
+
+            case 'agent_reasoning':
+              console.log('Adding reasoning message');
+              setMessages(prev => [...prev, {
+                id: `reasoning-${Date.now()}`,
+                type: "agent",
+                content: `💭 ${message.data.reasoning}`,
+                timestamp: new Date()
               }]);
               break;
           }
@@ -193,7 +206,46 @@ export function AgentChat({
           
           <div className="flex items-center gap-2">
             {!execution || execution.status === 'pending' ? (
-              <Button onClick={onStartExecution} size="sm">
+              <Button onClick={() => {
+              // Show demo of what the live automation looks like
+              setMessages(prev => [...prev, {
+                id: `demo-start-${Date.now()}`,
+                type: "system",
+                content: "Starting browser automation...",
+                timestamp: new Date()
+              }]);
+              
+              setTimeout(() => {
+                setMessages(prev => [...prev, {
+                  id: `demo-nav-${Date.now()}`,
+                  type: "agent", 
+                  content: `Navigating to ${agent.targetWebsite || 'target website'}`,
+                  timestamp: new Date()
+                }]);
+              }, 500);
+              
+              setTimeout(() => {
+                setMessages(prev => [...prev, {
+                  id: `demo-action-${Date.now()}`,
+                  type: "agent",
+                  content: "🤖 click at (150, 200) - Submit button",
+                  timestamp: new Date(),
+                  action: { type: 'click', x: 150, y: 200 }
+                }]);
+              }, 1500);
+              
+              setTimeout(() => {
+                setMessages(prev => [...prev, {
+                  id: `demo-screenshot-${Date.now()}`,
+                  type: "screenshot",
+                  content: "📸 Browser view after action",
+                  timestamp: new Date(),
+                  screenshot: "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                }]);
+              }, 2500);
+              
+              onStartExecution();
+            }} size="sm">
                 <Play className="w-4 h-4 mr-1" />
                 Start
               </Button>

@@ -54,6 +54,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
               // Handle real-time updates
               console.log("Received update:", data.data);
               
+              // Dispatch custom event for agent chat components to listen to
+              window.dispatchEvent(new CustomEvent('websocket-update', {
+                detail: data
+              }));
+              
               // Invalidate relevant queries to trigger refetch
               if (data.data.type === "agent_status_changed") {
                 queryClient.invalidateQueries({ queryKey: ["/api/agents"] });

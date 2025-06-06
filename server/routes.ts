@@ -286,11 +286,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
   wss.on('connection', (ws: WebSocket, req) => {
-    console.log('WebSocket client connected');
+    console.log('WebSocket client connected, total clients:', wss.clients.size);
+    
+    // Send immediate confirmation
+    ws.send(JSON.stringify({
+      type: 'connection_established',
+      message: 'Connected to real-time updates'
+    }));
     
     ws.on('message', (message) => {
       try {
         const data = JSON.parse(message.toString());
+        console.log('WebSocket received:', data);
         
         // Handle authentication and organization context
         if (data.type === 'authenticate') {
@@ -303,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     ws.on('close', () => {
-      console.log('WebSocket client disconnected');
+      console.log('WebSocket client disconnected, remaining:', wss.clients.size - 1);
     });
   });
 
