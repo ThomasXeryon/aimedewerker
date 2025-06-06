@@ -15,34 +15,39 @@ export function LiveScreenshotStream({
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    console.log(`Setting up SSE connection for agent ${agentId}`);
+    console.log(`[LiveStream] Setting up SSE for agent ${agentId}`);
     const eventSource = new EventSource(`/api/events/${agentId}`);
     
     eventSource.onopen = () => {
-      console.log('SSE connected for live screenshots');
+      console.log(`[LiveStream] Connected to agent ${agentId}`);
       setIsConnected(true);
     };
 
     eventSource.onmessage = (event) => {
+      console.log(`[LiveStream] Message received:`, event.data.substring(0, 100) + '...');
       try {
         const data = JSON.parse(event.data);
-        console.log('SSE message received:', data.type);
+        console.log(`[LiveStream] Parsed message type: ${data.type}`);
+        
         if (data.type === 'agent_screenshot' && data.screenshot) {
-          console.log('📸 Received screenshot from SSE, size:', data.screenshot.length);
+          console.log(`[LiveStream] Screenshot received, length: ${data.screenshot.length}`);
           setFrame("data:image/png;base64," + data.screenshot);
+        } else if (data.type === 'connected') {
+          console.log(`[LiveStream] Initial connection confirmed for agent ${data.agentId}`);
         }
       } catch (error) {
-        console.error('Error parsing SSE message:', error);
-        console.log('Raw event data:', event.data);
+        console.error('[LiveStream] Parse error:', error);
+        console.log('[LiveStream] Raw data:', event.data);
       }
     };
 
     eventSource.onerror = (err) => {
-      console.error("SSE error:", err);
+      console.error("[LiveStream] SSE error:", err);
       setIsConnected(false);
     };
 
     return () => {
+      console.log(`[LiveStream] Closing SSE for agent ${agentId}`);
       eventSource.close();
     };
   }, [agentId]);

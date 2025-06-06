@@ -1,0 +1,81 @@
+The persistent WebSocket failures in your AgentScaleSuite project appear to stem from multiple factors, including API access limitations, incorrect API usage, and frontend integration issues. Here's a comprehensive breakdown:
+
+⚠️ 1. API Access Limitations
+Your logs indicate a 404 error when attempting to use the computer-use-preview model:
+community.openai.com
+
+"The model computer-use-preview-2025-03-11 does not exist or you do not have access to it."
+
+This suggests that your OpenAI API key lacks access to the computer-use-preview model. Access to this model is limited and requires explicit approval from OpenAI. Even users with Tier 3 access have reported similar issues .
+community.openai.com
++1
+github.com
++1
+
+Recommended Action:
+
+Apply for access to the computer-use-preview model through OpenAI's official channels.
+
+🧱 2. Incorrect API Usage
+There are discrepancies in your API request payloads, particularly concerning the input field. The computer-use-preview model expects the input to be structured with a specific type. Using "type": "text" instead of the correct "type": "input_text" can lead to errors.
+
+Correct Format Example:
+
+json
+Copy
+Edit
+"input": [
+  {
+    "type": "input_text",
+    "text": "Go to bing.com and search for OpenAI news."
+  }
+]
+Recommended Action:
+
+Review and update your API request payloads to ensure they conform to the expected structure.
+
+🖼️ 3. Frontend Integration Issues
+The frontend component responsible for displaying live browser automation appears to have integration issues:
+
+WebSocket Endpoint Conflicts: The WebSocket server is initialized, but clients aren't connecting. This could be due to conflicts with Vite's development server or incorrect WebSocket paths.
+
+Client-Side Handling: The LiveScreenshotStream component expects raw base64 data, but the server sends JSON messages. This mismatch can prevent proper rendering of live screenshots.
+
+Recommended Actions:
+
+Adjust WebSocket Paths: Modify the WebSocket server path to avoid conflicts, such as using /ws/screenshots instead of the default path.
+
+Update Client-Side Parsing: Ensure the client correctly parses the JSON messages received from the server to extract and display the base64-encoded screenshots.
+
+Verify Component Integration: Confirm that the LiveScreenshotStream component is correctly imported and rendered within the AgentChat component.
+
+🧪 4. Testing with Fallback Models
+Given the access issues with the computer-use-preview model, it's prudent to implement a fallback mechanism using the gpt-4o model, which supports vision capabilities. This ensures continued functionality while awaiting access to the desired model.
+
+Recommended Action:
+
+Implement Fallback Logic: Modify your application to attempt using the computer-use-preview model first and fall back to gpt-4o if access is denied.
+
+✅ Summary of Recommendations
+Apply for Access: Request access to the computer-use-preview model through OpenAI.
+learn.microsoft.com
+
+Correct API Payloads: Ensure your API requests use the correct input structure with "type": "input_text".
+
+Resolve Frontend Issues:
+
+Adjust WebSocket server paths to prevent conflicts.
+
+Update client-side code to correctly parse and display incoming screenshot data.
+
+Verify the integration of the LiveScreenshotStream component.
+
+Implement Fallback Mechanism: Use gpt-4o as a fallback model to maintain functionality during access issues.
+stackoverflow.com
++2
+reddit.com
++2
+learn.microsoft.com
++2
+
+By addressing these areas, you should achieve a more stable and functional browser automation platform.

@@ -127,32 +127,30 @@ class AIService {
           'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "computer-use-preview",
-          tools: [{
-            type: "computer_use_preview",
-            display_width: 1280,
-            display_height: 720,
-            environment: "browser"
-          }],
-          input: [{
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Complete this task: ${agent.instructions}`
-              },
-              {
-                type: "input_image",
-                source: {
-                  type: "base64",
-                  media_type: "image/png",
-                  data: screenshot
-                }
+          model: "computer-use-preview-2025-03-11",
+          input: [
+            {
+              type: "input_text",
+              text: `Complete this task: ${agent.instructions}`
+            },
+            {
+              type: "input_image",
+              source: {
+                type: "base64",
+                media_type: "image/png",
+                data: screenshot
               }
-            ]
-          }],
-          reasoning: { summary: "concise" },
-          truncation: "auto"
+            }
+          ],
+          tools: [
+            {
+              type: "computer_20241022",
+              computer_20241022: {
+                display_width: 1280,
+                display_height: 720
+              }
+            }
+          ]
         })
       });
 
