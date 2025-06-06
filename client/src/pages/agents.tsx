@@ -121,9 +121,21 @@ export default function Agents() {
               
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bot className="w-5 h-5" />
-                    {selectedAgent.name}
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bot className="w-5 h-5" />
+                      {selectedAgent.name}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingAgent(selectedAgent);
+                        setEditModalOpen(true);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -326,6 +338,12 @@ export default function Agents() {
       <CreateAgentModal 
         open={createModalOpen} 
         onOpenChange={setCreateModalOpen} 
+      />
+      
+      <EditAgentModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        agent={editingAgent}
       />
     </div>
   );

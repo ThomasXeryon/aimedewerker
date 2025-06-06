@@ -27,7 +27,10 @@ import { useToast } from "@/hooks/use-toast";
 
 const editAgentSchema = insertAgentSchema.extend({
   framerate: z.number().min(0.5).max(10).default(2),
-});
+}).transform(data => ({
+  ...data,
+  description: data.description || ""
+}));
 
 type EditAgentData = z.infer<typeof editAgentSchema>;
 
@@ -46,8 +49,8 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
       name: agent?.name || "",
       description: agent?.description || "",
       instructions: agent?.instructions || "",
-      priority: agent?.priority || "medium",
-      framerate: (agent as any)?.framerate || 2,
+      priority: agent?.priority || "normal",
+      framerate: (agent as any)?.config?.framerate || 2,
     },
   });
 
@@ -110,7 +113,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="Brief description" {...field} />
+                    <Input placeholder="Brief description" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

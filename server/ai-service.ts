@@ -222,8 +222,10 @@ class AIService {
         screenshot: screenshot
       });
 
-      // Wait briefly between actions
-      await page.waitForTimeout(1000);
+      // Wait based on agent's configured framerate
+      const framerate = (context.agent.config as any)?.framerate || 2;
+      const delay = 1000 / framerate;
+      await page.waitForTimeout(delay);
 
       // Send screenshot back to continue the loop
       response = await openai.responses.create({

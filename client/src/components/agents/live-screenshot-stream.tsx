@@ -1,18 +1,21 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface LiveScreenshotStreamProps {
   agentId: number;
   width?: number;
   height?: number;
+  framerate?: number;
 }
 
 export function LiveScreenshotStream({ 
   agentId, 
   width = 640, 
-  height = 480 
+  height = 480,
+  framerate = 2
 }: LiveScreenshotStreamProps) {
   const [frame, setFrame] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   useEffect(() => {
     console.log(`[LiveStream] Setting up SSE for agent ${agentId}`);
