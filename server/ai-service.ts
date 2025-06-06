@@ -89,7 +89,7 @@ class AIService {
     });
 
     const page = await browser.newPage({
-      viewport: { width: 1024, height: 768 },
+      viewport: { width: 1280, height: 720 },
     });
 
     // Navigate to target website if specified, otherwise start with a demo page
@@ -128,8 +128,8 @@ class AIService {
           model: "computer-use-preview",
           tools: [{
             type: "computer_use_preview",
-            display_width: 1024,
-            display_height: 768,
+            display_width: 1280,
+            display_height: 720,
             environment: "browser"
           }],
           input: [{
@@ -331,13 +331,19 @@ class AIService {
             role: "system",
             content: `You are an expert browser automation agent with precise computer vision. Your task: ${agent.instructions}
 
-            COORDINATE PRECISION CRITICAL:
+            CRITICAL VIEWPORT INFO:
+            - Screenshot dimensions: EXACTLY 1280x720 pixels
+            - Coordinate system: (0,0) at top-left, (1279,719) at bottom-right
+            - You MUST provide coordinates within this exact range
+            - Click coordinates must be precise pixel locations within the screenshot
+
+            COORDINATE PRECISION RULES:
             - Study the screenshot pixel-by-pixel to identify exact element locations
             - Click in the CENTER of buttons, links, and form fields
             - Account for visual padding, borders, and element spacing
-            - Viewport is 1024x768 - ensure all coordinates fit within bounds
             - For text fields: click in the middle of the input area
             - For buttons: click dead center of the button text/area
+            - Never use coordinates outside 0-1279 (width) or 0-719 (height)
             
             VISUAL ANALYSIS PROCESS:
             1. Scan entire screenshot from top-left to bottom-right
@@ -427,15 +433,19 @@ class AIService {
       switch (action.type) {
         case 'click':
           if (typeof action.x === 'number' && typeof action.y === 'number') {
-            // Ensure coordinates are within viewport bounds
+            // Get actual viewport size and check scaling
             const viewport = page.viewportSize();
+            console.log(`Current viewport: ${viewport.width}x${viewport.height}`);
+            console.log(`Raw coordinates received: (${action.x}, ${action.y})`);
+            
+            // Ensure coordinates are within viewport bounds
             const x = Math.max(0, Math.min(action.x, viewport.width - 1));
             const y = Math.max(0, Math.min(action.y, viewport.height - 1));
             
-            console.log(`Clicking at coordinates: (${x}, ${y})`);
+            console.log(`Adjusted coordinates: (${x}, ${y})`);
             await page.mouse.click(x, y, { 
               button: action.button || 'left',
-              delay: 100 // Add small delay for better reliability
+              delay: 100
             });
           } else {
             console.warn('Invalid click coordinates:', action.x, action.y);
@@ -500,7 +510,15 @@ class AIService {
   }
 
   private async takeScreenshot(page: any): Promise<string> {
-    const screenshot = await page.screenshot({ fullPage: true });
+    const viewport = page.viewportSize();
+    console.log(`Taking screenshot with viewport: ${viewport.width}x${viewport.height}`);
+    
+    const screenshot = await page.screenshot({ 
+      fullPage: false, // Use viewport size, not full page
+      clip: { x: 0, y: 0, width: viewport.width, height: viewport.height }
+    });
+    
+    console.log(`Screenshot captured for ${viewport.width}x${viewport.height} viewport`);
     return screenshot.toString('base64');
   }
 
