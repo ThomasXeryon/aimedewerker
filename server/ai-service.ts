@@ -456,9 +456,7 @@ class AIService {
 
         case 'type':
           if (action.text) {
-            // Clear any existing text first using standard keyboard shortcuts
-            await page.keyboard.press('Control+A');
-            await page.keyboard.press('Delete');
+            // Simply type the text without clearing - let the AI handle field selection
             await page.keyboard.type(action.text, { delay: 50 });
           }
           break;
@@ -520,8 +518,28 @@ class AIService {
       clip: { x: 0, y: 0, width: viewport.width, height: viewport.height }
     });
     
+    const base64Screenshot = screenshot.toString('base64');
     console.log(`Screenshot captured for ${viewport.width}x${viewport.height} viewport`);
-    return screenshot.toString('base64');
+    
+    // Stream screenshot to WebSocket clients
+    this.streamScreenshotToClients(base64Screenshot);
+    
+    return base64Screenshot;
+  }
+
+  private streamScreenshotToClients(screenshot: string): void {
+    const wss = globalThis.screenshotWss;
+    if (wss) {
+      wss.clients.forEach((ws: any) => {
+        if (ws.readyState === 1) { // WebSocket.OPEN
+          try {
+            ws.send(screenshot);
+          } catch (error) {
+            console.error('Error streaming screenshot:', error);
+          }
+        }
+      });
+    }
   }
 
   private async cleanupExecutionContext(executionId: number): Promise<void> {

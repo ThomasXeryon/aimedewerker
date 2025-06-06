@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Play, Pause, Square, Send, User, Bot, Eye } from "lucide-react";
 import type { Agent, TaskExecution } from "@shared/schema";
+import { LiveScreenshotStream } from "./live-screenshot-stream";
 
 interface Message {
   id: string;
