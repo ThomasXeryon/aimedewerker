@@ -1,40 +1,13 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { z } from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { insertAgentSchema, Agent } from "@shared/schema";
+import { Agent } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-const editAgentSchema = insertAgentSchema.extend({
-  framerate: z.number().min(0.5).max(10).default(2),
-}).transform(data => ({
-  ...data,
-  description: data.description || ""
-}));
-
-type EditAgentData = z.infer<typeof editAgentSchema>;
 
 interface EditAgentModalProps {
   open: boolean;
@@ -44,26 +17,19 @@ interface EditAgentModalProps {
 
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
-  
-  console.log('EditAgentModal rendered:', { open, agent: agent?.name });
-  
+  const [isLoading, setIsLoading] = useState(false);
 
-
-  const form = useForm<EditAgentData>({
-    resolver: zodResolver(editAgentSchema),
-    defaultValues: {
-      name: agent?.name || "",
-      description: agent?.description || "",
-      instructions: agent?.instructions || "",
-      priority: agent?.priority || "normal",
-      framerate: (agent as any)?.config?.framerate || 2,
-    },
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    instructions: "",
+    priority: "normal" as const,
+    framerate: 2
   });
 
-  // Reset form when agent changes or modal opens
+  // Update form data when agent changes
   useEffect(() => {
-    console.log('EditAgentModal useEffect:', { open, agent: agent?.name });
-    if (agent) {
+    if (agent && open) {
       let config: any = {};
       try {
         if (agent.config && typeof agent.config === 'string') {
@@ -71,38 +37,36 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         }
       } catch (e) {
         console.warn('Failed to parse agent config:', e);
-        config = {};
       }
-      
-      form.reset({
+
+      setFormData({
         name: agent.name || "",
         description: agent.description || "",
         instructions: agent.instructions || "",
         priority: agent.priority || "normal",
-        framerate: config.framerate || 2,
+        framerate: config.framerate || 2
       });
     }
-  }, [agent, form]);
+  }, [agent, open]);
 
-  const updateAgentMutation = useMutation({
-    mutationFn: async (data: EditAgentData) => {
-      if (!agent) throw new Error("No agent to update");
-      
-      // Prepare update payload with config
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agent) return;
+
+    setIsLoading(true);
+    try {
       const updatePayload = {
-        name: data.name,
-        description: data.description,
-        instructions: data.instructions,
-        priority: data.priority,
+        name: formData.name,
+        description: formData.description,
+        instructions: formData.instructions,
+        priority: formData.priority,
         config: JSON.stringify({
-          framerate: data.framerate
+          framerate: formData.framerate
         })
       };
-      
-      const res = await apiRequest("PATCH", `/api/agents/${agent.id}`, updatePayload);
-      return res.json();
-    },
-    onSuccess: () => {
+
+      await apiRequest("PATCH", `/api/agents/${agent.id}`, updatePayload);
+
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/executions"] });
       toast({
@@ -110,152 +74,112 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         description: "Changes have been saved successfully",
       });
       onOpenChange(false);
-    },
-    onError: (error: Error) => {
+    } catch (error: any) {
       toast({
         title: "Failed to update agent",
         description: error.message,
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = (data: EditAgentData) => {
-    console.log('Submitting agent update:', data);
-    updateAgentMutation.mutate(data);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!open || !agent) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      console.log('Dialog onOpenChange called:', { newOpen, currentOpen: open });
-      if (!newOpen) {
-        // Only close if user explicitly requested it
-        onOpenChange(newOpen);
-      }
-    }}>
-      <DialogContent className="sm:max-w-[600px]" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle>Edit Agent: {agent.name}</DialogTitle>
-          <DialogDescription>
-            Update the agent's configuration and settings.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Agent name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Brief description" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="instructions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Instructions</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="What should this agent do?"
-                      className="min-h-[100px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <div 
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+      onClick={(e) => e.target === e.currentTarget && onOpenChange(false)}
+    >
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold">Edit Agent: {agent.name}</h2>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>×</Button>
+        </div>
 
-            <FormField
-              control={form.control}
-              name="framerate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Screenshot Framerate: {field.value} fps</FormLabel>
-                  <FormControl>
-                    <Slider
-                      min={0.5}
-                      max={10}
-                      step={0.5}
-                      value={[field.value]}
-                      onValueChange={(value) => field.onChange(value[0])}
-                      className="w-full"
-                    />
-                  </FormControl>
-                  <div className="text-sm text-muted-foreground">
-                    Controls how often screenshots are captured (0.5-10 fps)
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Agent name"
+              required
             />
-            
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={updateAgentMutation.isPending}
-              >
-                {updateAgentMutation.isPending ? "Updating..." : "Update Agent"}
-              </Button>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Brief description"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="instructions">Instructions</Label>
+            <Textarea
+              id="instructions"
+              value={formData.instructions}
+              onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+              placeholder="What should this agent do?"
+              className="min-h-[100px]"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="priority">Priority</Label>
+            <Select value={formData.priority} onValueChange={(value: any) => setFormData({ ...formData, priority: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Screenshot Framerate: {formData.framerate} fps</Label>
+            <Slider
+              min={0.5}
+              max={10}
+              step={0.5}
+              value={[formData.framerate]}
+              onValueChange={(value) => setFormData({ ...formData, framerate: value[0] })}
+              className="w-full mt-2"
+            />
+            <div className="text-sm text-muted-foreground mt-1">
+              Controls how often screenshots are captured (0.5-10 fps)
             </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+            >
+              {isLoading ? "Updating..." : "Update Agent"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
