@@ -186,12 +186,12 @@ export function AgentChat({
 
       <CardContent className="flex-1 flex flex-col p-0">
         {/* Live Screenshot Stream */}
-        {execution && execution.status === 'running' && (
-          <div className="p-4 border-b bg-gray-50">
-            <div className="text-sm font-medium mb-2 text-gray-700">Live Browser View</div>
-            <LiveScreenshotStream agentId={agent.id} width={640} height={400} />
+        <div className="p-4 border-b bg-gray-50">
+          <div className="text-sm font-medium mb-2 text-gray-700">
+            Live Browser View (Agent {agent.id}) - Status: {execution?.status || 'none'}
           </div>
-        )}
+          <LiveScreenshotStream agentId={agent.id} width={640} height={400} />
+        </div>
 
         
         <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>

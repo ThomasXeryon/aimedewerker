@@ -26,12 +26,14 @@ export function LiveScreenshotStream({
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('SSE message received:', data.type);
         if (data.type === 'agent_screenshot' && data.screenshot) {
-          console.log('Received screenshot from SSE');
+          console.log('📸 Received screenshot from SSE, size:', data.screenshot.length);
           setFrame("data:image/png;base64," + data.screenshot);
         }
       } catch (error) {
         console.error('Error parsing SSE message:', error);
+        console.log('Raw event data:', event.data);
       }
     };
 
@@ -46,30 +48,28 @@ export function LiveScreenshotStream({
   }, [agentId]);
 
   return (
-    <div className="relative">
-      {!isConnected && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white">
-          Connecting to live stream...
-        </div>
-      )}
+    <div className="relative border rounded bg-black" style={{ width, height }}>
+      {/* Connection status */}
+      <div className="absolute top-2 right-2 z-10">
+        <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+      </div>
+      
+      {/* Screenshot display */}
       {frame ? (
         <img 
           src={frame} 
-          width={width} 
-          height={height} 
           alt="Live Agent View" 
-          className="border rounded"
+          className="w-full h-full object-contain"
         />
       ) : (
-        <div 
-          className="bg-gray-100 border rounded flex items-center justify-center text-gray-500"
-          style={{ width, height }}
-        >
-          Waiting for screenshots...
+        <div className="flex items-center justify-center h-full text-white/70">
+          {isConnected ? 'Waiting for screenshots...' : 'Connecting to stream...'}
         </div>
       )}
-      <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-        {isConnected ? '🔴 LIVE' : '⚫ OFFLINE'}
+      
+      {/* Status indicator */}
+      <div className="absolute bottom-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
+        {isConnected ? 'LIVE' : 'OFFLINE'} - Agent {agentId}
       </div>
     </div>
   );
