@@ -116,36 +116,51 @@ class AIService {
     context.screenshots.push(screenshot);
 
     try {
-      // Use OpenAI Computer Use API with responses.create
-      const response = await openai.responses.create({
-        model: "computer-use-preview",
-        tools: [{
-          type: "computer_use_preview",
-          display_width: 1024,
-          display_height: 768,
-          environment: "browser"
-        }],
-        input: [{
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: `Complete this task: ${agent.instructions}`
-            },
-            {
-              type: "input_image",
-              image_url: `data:image/png;base64,${screenshot}`
-            }
-          ]
-        }],
-        reasoning: {
-          summary: "concise"
+      // Use OpenAI Computer Use API with direct fetch
+      const computerUseResponse = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'api-version': 'preview'
         },
-        truncation: "auto"
+        body: JSON.stringify({
+          model: "computer-use-preview",
+          input: [{
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Complete this task: ${agent.instructions}`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/png;base64,${screenshot}`,
+                  detail: "high"
+                }
+              }
+            ]
+          }],
+          tools: [{
+            type: "computer_use_preview",
+            display_width: 1024,
+            display_height: 768,
+            environment: "browser"
+          }],
+          truncation: "auto"
+        })
       });
 
-      console.log('Computer Use API response received, model:', response.model);
-      await this.processComputerUseResponse(context, response, screenshot);
+      if (computerUseResponse.ok) {
+        const response = await computerUseResponse.json();
+        console.log('Computer Use API response received, model:', response.model);
+        await this.processComputerUseResponse(context, response, screenshot);
+      } else {
+        const errorText = await computerUseResponse.text();
+        throw new Error(`Computer Use API error ${computerUseResponse.status}: ${errorText}`);
+      }
     } catch (error) {
       console.log('Computer Use API error:', error.message);
       console.log('Falling back to GPT-4o vision processing');
