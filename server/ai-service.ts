@@ -295,9 +295,18 @@ class AIService {
 
   private broadcastUpdate(organizationId: number, data: any): void {
     console.log('AI Service broadcasting:', data.type, 'for agent:', data.agentId);
-    // Use global broadcast function
-    if ((global as any).broadcastUpdate) {
-      (global as any).broadcastUpdate(organizationId, data);
+    
+    // Send to event stream if available
+    if ((global as any).eventStreams && data.agentId) {
+      const eventStream = (global as any).eventStreams.get(data.agentId);
+      if (eventStream) {
+        try {
+          eventStream.write(`data: ${JSON.stringify(data)}\n\n`);
+          console.log('Sent real-time update for agent:', data.agentId);
+        } catch (error) {
+          console.error('Error sending event stream update:', error);
+        }
+      }
     }
   }
 
