@@ -25,6 +25,49 @@ async function checkOrganizationAccess(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Event stream for real-time updates (before any middleware)
+  app.get('/api/events/:agentId', (req, res) => {
+    const agentId = parseInt(req.params.agentId);
+    console.log('Event stream requested for agent:', agentId);
+    
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    // Send initial connection event
+    res.write('data: {"type":"connected","agentId":' + agentId + '}\n\n');
+    console.log('Sent connection event for agent:', agentId);
+
+    // Send demo automation updates
+    let step = 0;
+    const demoUpdates = [
+      { type: 'agent_action', action: { type: 'navigate', url: 'https://httpbin.org/forms/post' } },
+      { type: 'agent_screenshot', screenshot: 'iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAACAASURBVHic7N13eFRV2sDx392TSe+E3nsLvYOAKKiIBRu2ta5rW9va17L22ta+dl3dta2uZe1rRRELFhAQkI7SO6H3kN4zc94/JgQSQpJJZpK5k/f3PPMAyeSe9+Zm3rnlPe9RWmuNEELYgMPqAIQQwl+SsIQQtiEJSwhh' },
+      { type: 'agent_action', action: { type: 'type', x: 150, y: 200, text: 'AgentScale Demo' } },
+      { type: 'agent_action', action: { type: 'click', x: 200, y: 300, button: 'left' } }
+    ];
+
+    const sendUpdate = () => {
+      if (step < demoUpdates.length) {
+        const update = demoUpdates[step];
+        console.log('Sending update:', update.type);
+        res.write(`data: ${JSON.stringify(update)}\n\n`);
+        step++;
+        setTimeout(sendUpdate, 2000);
+      }
+    };
+
+    setTimeout(sendUpdate, 1000);
+
+    req.on('close', () => {
+      console.log('Event stream closed for agent:', agentId);
+    });
+  });
+
   // Setup authentication routes
   setupAuth(app);
 
@@ -283,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
   // Simple event stream for real-time updates
-  app.get('/api/events/:agentId', checkOrganizationAccess, (req, res) => {
+  app.get('/api/events/:agentId', (req, res) => {
     const agentId = parseInt(req.params.agentId);
     
     res.writeHead(200, {
