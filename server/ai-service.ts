@@ -317,41 +317,52 @@ class AIService {
         messages: [
           {
             role: "system",
-            content: `You are an AI agent that controls a web browser to complete tasks. 
+            content: `You are an expert browser automation specialist. Your mission: ${agent.instructions}
+
+            CONTEXT:
+            - Agent: ${agent.type}
+            - Target: ${agent.targetWebsite || 'web interface'}
             
-            Agent Type: ${agent.type}
-            Instructions: ${agent.instructions}
+            AVAILABLE ACTIONS:
+            • click(x, y) - Click precise coordinates
+            • type(text) - Enter text in focused fields
+            • scroll(x, y, scroll_x, scroll_y) - Scroll page sections
+            • keypress(keys) - Keyboard shortcuts
+            • wait() - Pause for loading
             
-            You can perform these actions:
-            - click(x, y, button="left") - Click at coordinates
-            - type(text) - Type text
-            - scroll(x, y, scroll_x, scroll_y) - Scroll at coordinates
-            - keypress(keys) - Press keyboard keys
-            - wait() - Wait briefly
-            - screenshot() - Take a screenshot
+            STRATEGY:
+            1. Examine screenshot systematically
+            2. Identify key interactive elements
+            3. Choose most direct path to goal
+            4. Use precise coordinates for reliability
+            5. Complete forms methodically
+            6. Verify success after each action
             
-            Analyze the current screenshot and determine the next action to complete the task.
-            If the task is complete, respond with "TASK_COMPLETE".
+            IMPORTANT:
+            - Be extremely precise with coordinates
+            - Look for form fields, buttons, links, dropdowns
+            - Read error messages and success indicators
+            - Navigate step-by-step toward task completion
+            - If stuck, try scrolling or waiting for page loads
             
-            Respond with JSON in this format:
+            RESPOND WITH VALID JSON:
             {
               "action": {
-                "type": "click|type|scroll|keypress|wait|screenshot",
+                "type": "click|type|scroll|keypress|wait",
                 "x": number,
                 "y": number,
-                "button": "left|right",
-                "text": "text to type",
-                "keys": ["key1", "key2"],
-                "scroll_x": number,
-                "scroll_y": number
+                "text": "exact text",
+                "keys": ["Enter", "Tab"],
+                "scroll_x": 0,
+                "scroll_y": 300
               },
-              "reasoning": "Explanation of why this action is needed"
+              "reasoning": "Why this action advances the task"
             }
             
-            Or if complete:
+            TASK COMPLETE FORMAT:
             {
               "complete": true,
-              "summary": "Task completion summary"
+              "summary": "Successfully completed task"
             }`
           },
           {
@@ -359,7 +370,19 @@ class AIService {
             content: [
               {
                 type: "text",
-                text: "Current screenshot of the browser. What action should I take next?"
+                text: `CURRENT TASK: ${agent.instructions}
+                
+                Analyze this browser screenshot and determine the most logical next action to complete the task.
+                
+                Look for:
+                - Forms that need data entry
+                - Buttons to submit or navigate
+                - Links to click
+                - Fields that require input
+                - Error messages or validation issues
+                - Success confirmations
+                
+                Choose the single most important action that progresses toward task completion.`
               },
               {
                 type: "image_url",
