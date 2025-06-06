@@ -17,15 +17,18 @@ export function LiveScreenshotStream({
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws/screenshots`;
+    console.log(`Attempting WebSocket connection to: ${wsUrl}`);
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
+      console.log('WebSocket connected for live screenshots');
       setIsConnected(true);
       // Subscribe to screenshots for this agent
       socket.send(JSON.stringify({ 
         type: 'subscribe', 
         agentId: agentId 
       }));
+      console.log(`Subscribed to screenshots for agent ${agentId}`);
     };
 
     socket.onmessage = (event) => {
@@ -40,7 +43,7 @@ export function LiveScreenshotStream({
     };
 
     socket.onerror = (err) => {
-      console.error("WebSocket error:", err);
+      console.error("❌ WebSocket error:", err);
       setIsConnected(false);
     };
 

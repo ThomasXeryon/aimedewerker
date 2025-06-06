@@ -44,22 +44,26 @@ app.use((req, res, next) => {
     const wss = new WebSocketServer({ server, path: '/ws/screenshots' });
     
     wss.on('connection', (ws: any) => {
-      console.log('Screenshot stream client connected');
+      console.log('✓ Screenshot stream client connected');
       
       ws.on('message', (message: any) => {
         try {
           const data = JSON.parse(message.toString());
           if (data.type === 'subscribe' && data.agentId) {
             ws.agentId = data.agentId;
-            console.log(`Client subscribed to agent ${data.agentId} screenshots`);
+            console.log(`✓ Client subscribed to agent ${data.agentId} screenshots`);
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('❌ Error parsing WebSocket message:', error);
         }
       });
 
       ws.on('close', () => {
-        console.log('Screenshot stream client disconnected');
+        console.log('❌ Screenshot stream client disconnected');
+      });
+      
+      ws.on('error', (error: any) => {
+        console.error('❌ WebSocket error:', error);
       });
     });
 

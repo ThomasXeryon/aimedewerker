@@ -142,7 +142,7 @@ class AIService {
                 text: `Complete this task: ${agent.instructions}`
               },
               {
-                type: "image",
+                type: "input_image",
                 source: {
                   type: "base64",
                   media_type: "image/png",
