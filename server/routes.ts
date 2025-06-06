@@ -188,6 +188,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Start agent execution
+  app.post("/api/agents/:id/execute", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const agentId = parseInt(req.params.id);
+      const agent = await storage.getAgent(agentId);
+      
+      if (!agent || agent.organizationId !== req.user.organizationId) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+
+      // Create new task execution
+      const execution = await storage.createTaskExecution({
+        agentId: agentId,
+        status: 'pending',
+        organizationId: req.user.organizationId
+      });
+
+      // Start execution in background
+      const { aiService } = await import('./ai-service');
+      aiService.executeAgent(agentId, execution.id).catch(error => {
+        console.error('Agent execution failed:', error);
+        storage.updateTaskExecution(execution.id, {
+          status: 'failed',
+          endTime: new Date(),
+          error: error.message
+        });
+      });
+
+      res.json(execution);
+    } catch (error) {
+      console.error('Error starting execution:', error);
+      res.status(500).json({ message: "Failed to start execution" });
+    }
+  });
+
+  // Stop execution
+  app.post("/api/executions/:id/stop", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const executionId = parseInt(req.params.id);
+      const execution = await storage.getTaskExecution(executionId);
+      
+      if (!execution) {
+        return res.status(404).json({ message: "Execution not found" });
+      }
+
+      const agent = await storage.getAgent(execution.agentId);
+      if (!agent || agent.organizationId !== req.user.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { aiService } = await import('./ai-service');
+      await aiService.stopExecution(executionId);
+
+      res.json({ message: "Execution stopped" });
+    } catch (error) {
+      console.error('Error stopping execution:', error);
+      res.status(500).json({ message: "Failed to stop execution" });
+    }
+  });
+
+  // Pause execution
+  app.post("/api/executions/:id/pause", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const executionId = parseInt(req.params.id);
+      const execution = await storage.getTaskExecution(executionId);
+      
+      if (!execution) {
+        return res.status(404).json({ message: "Execution not found" });
+      }
+
+      const agent = await storage.getAgent(execution.agentId);
+      if (!agent || agent.organizationId !== req.user.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.updateTaskExecution(executionId, {
+        status: 'paused'
+      });
+
+      res.json({ message: "Execution paused" });
+    } catch (error) {
+      console.error('Error pausing execution:', error);
+      res.status(500).json({ message: "Failed to pause execution" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time updates
