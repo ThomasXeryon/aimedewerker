@@ -310,33 +310,7 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
 
-  // WebSocket server for continuous screenshot streaming
-  import('ws').then(({ WebSocketServer }) => {
-    const wss = new WebSocketServer({ server: httpServer, path: '/ws/screenshots' });
-
-    wss.on('connection', (ws: any, req: any) => {
-      console.log('Screenshot stream client connected');
-      
-      ws.on('message', (message: any) => {
-        try {
-          const data = JSON.parse(message.toString());
-          if (data.type === 'subscribe' && data.agentId) {
-            ws.agentId = data.agentId;
-            console.log(`Client subscribed to agent ${data.agentId} screenshots`);
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      });
-
-      ws.on('close', () => {
-        console.log('Screenshot stream client disconnected');
-      });
-    });
-
-    // Store WebSocket server globally for AI service access
-    (globalThis as any).screenshotWss = wss;
-  });
+  // WebSocket server for continuous screenshot streaming will be set up after server start
 
   // Simple event stream for real-time updates
   app.get('/api/events/:agentId', (req, res) => {
