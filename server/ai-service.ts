@@ -67,7 +67,7 @@ class AIService {
       await storage.updateTaskExecution(executionId, {
         status: 'failed',
         endTime: new Date(),
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
       await this.cleanupExecutionContext(executionId);
