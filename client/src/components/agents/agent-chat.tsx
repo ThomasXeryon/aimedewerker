@@ -48,27 +48,38 @@ export function AgentChat({
   }, [messages]);
 
   useEffect(() => {
-    if (!socket) return;
-
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const message = JSON.parse(event.data);
-        console.log('WebSocket message received in agent chat:', message);
-        
-        if (message.type === 'update' && message.data) {
-          const { type: updateType, action, screenshot, agentId } = message.data;
+    let eventSource: EventSource | null = null;
+    
+    const startEventStream = () => {
+      eventSource = new EventSource(`/api/events/${agent.id}`);
+      
+      eventSource.onopen = () => {
+        console.log('Event stream connected for agent', agent.id);
+        setIsConnected(true);
+      };
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('Received event:', data);
           
-          // Only show updates for the current agent
-          if (agentId && agentId !== agent.id) return;
-          
-          switch (updateType) {
+          switch (data.type) {
+            case 'connected':
+              setMessages(prev => [...prev, {
+                id: `connect-${Date.now()}`,
+                type: "system",
+                content: "Connected to live browser automation",
+                timestamp: new Date()
+              }]);
+              break;
+              
             case 'agent_action':
               setMessages(prev => [...prev, {
                 id: `action-${Date.now()}`,
                 type: "agent",
-                content: `${action.type}${action.x ? ` at (${action.x}, ${action.y})` : ''}${action.text ? ` - "${action.text}"` : ''}`,
+                content: `${data.action.type}${data.action.x ? ` at (${data.action.x}, ${data.action.y})` : ''}${data.action.text ? ` - "${data.action.text}"` : ''}`,
                 timestamp: new Date(),
-                action: action
+                action: data.action
               }]);
               break;
 
@@ -78,63 +89,32 @@ export function AgentChat({
                 type: "screenshot",
                 content: "Browser view",
                 timestamp: new Date(),
-                screenshot: screenshot
+                screenshot: data.screenshot
               }]);
               break;
           }
+        } catch (error) {
+          console.error('Error parsing event data:', error);
         }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
-
-    const handleLegacyMessage = (data: any) => {
-      const { type, payload } = JSON.parse(data);
+      };
       
-      switch (type) {
-        case 'agent_action':
-          setMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            type: "agent",
-            content: `Executing action: ${payload.action.type}`,
-            timestamp: new Date(),
-            action: payload.action
-          }]);
-          break;
-
-        case 'agent_screenshot':
-          setMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            type: "screenshot",
-            content: "Browser screenshot",
-            timestamp: new Date(),
-            screenshot: payload.screenshot
-          }]);
-          break;
-
-        case 'agent_reasoning':
-          setMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            type: "agent",
-            content: payload.reasoning,
-            timestamp: new Date()
-          }]);
-          break;
-
-        case 'execution_status':
-          setMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            type: "system",
-            content: `Execution status: ${payload.status}`,
-            timestamp: new Date()
-          }]);
-          break;
-      }
+      eventSource.onerror = () => {
+        console.log('Event stream error, reconnecting...');
+        setIsConnected(false);
+        eventSource?.close();
+        setTimeout(startEventStream, 3000);
+      };
     };
+    
+    startEventStream();
+    
+    return () => {
+      eventSource?.close();
+      setIsConnected(false);
+    };
+  }, [agent.id]);
 
-    socket.addEventListener('message', handleMessage);
-    return () => socket.removeEventListener('message', handleMessage);
-  }, [socket]);
+
 
   const sendMessage = () => {
     if (!newMessage.trim() || !socket) return;

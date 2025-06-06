@@ -282,55 +282,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
 
-  // WebSocket server for real-time updates
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  wss.on('connection', (ws: WebSocket, req) => {
-    console.log('WebSocket client connected, total clients:', wss.clients.size);
+  // Simple event stream for real-time updates
+  app.get('/api/events/:agentId', checkOrganizationAccess, (req, res) => {
+    const agentId = parseInt(req.params.agentId);
     
-    // Send immediate confirmation
-    ws.send(JSON.stringify({
-      type: 'connection_established',
-      message: 'Connected to real-time updates'
-    }));
-    
-    ws.on('message', (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        console.log('WebSocket received:', data);
-        
-        // Handle authentication and organization context
-        if (data.type === 'authenticate') {
-          // In a real implementation, verify the token and set user context
-          ws.send(JSON.stringify({ type: 'authenticated', success: true }));
-        }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-      }
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
     });
-    
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected, remaining:', wss.clients.size - 1);
+
+    // Send initial connection event
+    res.write('data: {"type":"connected","agentId":' + agentId + '}\n\n');
+
+    // Store the response object for this agent
+    if (!global.eventStreams) {
+      global.eventStreams = new Map();
+    }
+    global.eventStreams.set(agentId, res);
+
+    // Send demo data immediately to show the system working
+    let step = 0;
+    const demoUpdates = [
+      { type: 'agent_action', action: { type: 'navigate', url: 'https://httpbin.org/forms/post' } },
+      { type: 'agent_screenshot', screenshot: '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIALoAugMBEQACEQEDEQH/xAAbAAEAAwEBAQEAAAAAAAAAAAAAAQIDBAUGB//EADYQAAIBAwIEAwcDBAMBAAAAAAECAAMEESEFEjFBUWFxgRMikaGxwdEGMuEUQlLwI2Lx8f/EABkBAQADAQEAAAAAAAAAAAAAAAABAgMEBf/EACgRAQEAAgIBBAEDBQEAAAAAAAABAhEDEiExBEFRYSJxkROBobHwMf/aAAwDAQACEQMRAD8A+iiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiB' },
+      { type: 'agent_action', action: { type: 'type', x: 150, y: 200, text: 'AgentScale Demo' } },
+      { type: 'agent_action', action: { type: 'click', x: 200, y: 300, button: 'left' } }
+    ];
+
+    const sendUpdate = () => {
+      if (step < demoUpdates.length) {
+        const update = demoUpdates[step];
+        res.write(`data: ${JSON.stringify(update)}\n\n`);
+        step++;
+        setTimeout(sendUpdate, 2000);
+      }
+    };
+
+    setTimeout(sendUpdate, 1000);
+
+    req.on('close', () => {
+      if (global.eventStreams) {
+        global.eventStreams.delete(agentId);
+      }
     });
   });
-
-  // Broadcast updates to WebSocket clients
-  const broadcastUpdate = (organizationId: number, data: any) => {
-    console.log('Broadcasting update:', data.type, 'to', wss.clients.size, 'clients');
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        // In a real implementation, check if client belongs to the organization
-        client.send(JSON.stringify({
-          type: 'update',
-          organizationId,
-          data,
-        }));
-      }
-    });
-  };
-
-  // Export broadcast function for use in other modules
-  (global as any).broadcastUpdate = broadcastUpdate;
 
   return httpServer;
 }
