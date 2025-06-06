@@ -117,7 +117,7 @@ class AIService {
 
     try {
       // Use OpenAI Computer Use API with responses.create
-      let response = await openai.responses.create({
+      const response = await openai.responses.create({
         model: "computer-use-preview",
         tools: [{
           type: "computer_use_preview",
@@ -130,17 +130,11 @@ class AIService {
           content: [
             {
               type: "input_text",
-              text: `Complete this task: ${agent.instructions}
-              
-              Target: ${agent.targetWebsite || 'web interface'}
-              Agent Type: ${agent.type}
-              
-              Use the computer to navigate, click, type, and complete the specified task.`
+              text: `Complete this task: ${agent.instructions}`
             },
             {
               type: "input_image",
-              image_url: `data:image/png;base64,${screenshot}`,
-              detail: "high"
+              image_url: `data:image/png;base64,${screenshot}`
             }
           ]
         }],
@@ -150,9 +144,11 @@ class AIService {
         truncation: "auto"
       });
 
+      console.log('Computer Use API response received, model:', response.model);
       await this.processComputerUseResponse(context, response, screenshot);
     } catch (error) {
-      console.log('OpenAI Computer Use API not available, using enhanced vision processing');
+      console.log('Computer Use API error:', error.message);
+      console.log('Falling back to GPT-4o vision processing');
       let response = await this.processTaskWithVision(agent, screenshot);
       await this.processLegacyResponse(context, response, screenshot);
     }
