@@ -138,7 +138,7 @@ class AIService {
             role: "user",
             content: [
               {
-                type: "text",
+                type: "input_text",
                 text: `Complete this task: ${agent.instructions}`
               },
               {
@@ -456,8 +456,8 @@ class AIService {
 
         case 'type':
           if (action.text) {
-            // Clear any existing text first
-            await page.keyboard.selectAll();
+            // Clear any existing text first using standard keyboard shortcuts
+            await page.keyboard.press('Control+A');
             await page.keyboard.press('Delete');
             await page.keyboard.type(action.text, { delay: 50 });
           }
