@@ -138,7 +138,7 @@ class AIService {
             role: "user",
             content: [
               {
-                type: "input_text",
+                type: "text",
                 text: `Complete this task: ${agent.instructions}`
               },
               {

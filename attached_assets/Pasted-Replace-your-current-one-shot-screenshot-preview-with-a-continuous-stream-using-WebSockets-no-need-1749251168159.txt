@@ -1,0 +1,86 @@
+Replace your current one-shot screenshot preview with a continuous stream using WebSockets — no need to change the screenshot generator.
+
+✅ WHAT TO CHANGE
+1. Update your Python backend to stream screenshots repeatedly
+Modify your existing screenshot function (whatever captures the UI) to be called in a loop that sends screenshots via WebSocket.
+
+Replace your current handler with this:
+(server.py or wherever you already take screenshots)
+
+python
+Copy
+Edit
+import asyncio
+import websockets
+import base64
+import time
+
+# Use your existing screenshot method
+from your_screenshot_module import take_screenshot_base64  # this returns a base64 string
+
+async def stream_handler(websocket):
+    print("Client connected")
+    try:
+        while True:
+            screenshot_b64 = take_screenshot_base64()
+            await websocket.send(screenshot_b64)
+            await asyncio.sleep(0.3)  # ~3 FPS, tune as needed
+    except websockets.exceptions.ConnectionClosed:
+        print("Client disconnected")
+
+async def main():
+    print("WebSocket stream server running on port 8765")
+    async with websockets.serve(stream_handler, "0.0.0.0", 8765):
+        await asyncio.Future()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+⚠️ If you don’t use take_screenshot_base64() yet, you can wrap your existing logic with:
+
+python
+Copy
+Edit
+def take_screenshot_base64():
+    # Should return base64-encoded JPEG or PNG
+    ...
+2. Replace React polling with WebSocket streaming
+In your App.jsx or wherever the image is rendered in React, replace fetch polling with a WebSocket-based stream.
+
+Replace your image rendering logic with this:
+jsx
+Copy
+Edit
+import React, { useEffect, useState } from "react";
+
+function App() {
+  const [frame, setFrame] = useState("");
+
+  useEffect(() => {
+    const socket = new WebSocket("ws://" + window.location.hostname + ":8765");
+
+    socket.onmessage = (event) => {
+      setFrame("data:image/jpeg;base64," + event.data);
+    };
+
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
+    return () => socket.close();
+  }, []);
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h1>Live Screenshot Stream</h1>
+      <img src={frame} alt="Live View" width="640" height="480" />
+    </div>
+  );
+}
+
+export default App;
+3. Nothing else changes
+Your existing GPT-4o fallback logic (for reasoning) still works.
+
+You can pick 1 frame every few seconds and send it to GPT-4o for instructions.
+
+The live view is just for humans — the model still sees only one frame at a time.
