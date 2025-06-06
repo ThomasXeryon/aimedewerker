@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -44,11 +45,7 @@ interface EditAgentModalProps {
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
   
-  console.log('EditAgentModal rendered:', { open, agent: agent?.name });
-  
-  useEffect(() => {
-    console.log('EditAgentModal useEffect:', { open, agent: agent?.name });
-  }, [open, agent]);
+
 
   const form = useForm<EditAgentData>({
     resolver: zodResolver(editAgentSchema),
@@ -63,7 +60,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
 
   // Reset form when agent changes or modal opens
   useEffect(() => {
-    if (agent && open) {
+    if (agent) {
       let config: any = {};
       try {
         if (agent.config && typeof agent.config === 'string') {
@@ -82,7 +79,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         framerate: config.framerate || 2,
       });
     }
-  }, [agent, open, form]);
+  }, [agent, form]);
 
   const updateAgentMutation = useMutation({
     mutationFn: async (data: EditAgentData) => {
@@ -125,10 +122,8 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     updateAgentMutation.mutate(data);
   };
 
-  if (!agent) return null;
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && !!agent} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Edit Agent</DialogTitle>
