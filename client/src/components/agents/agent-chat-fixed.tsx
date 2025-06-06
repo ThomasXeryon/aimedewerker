@@ -190,7 +190,12 @@ export function AgentChat({
           <div className="text-sm font-medium mb-2 text-gray-700">
             Live Browser View (Agent {agent.id}) - Status: {execution?.status || 'none'}
           </div>
-          <LiveScreenshotStream agentId={agent.id} width={640} height={400} />
+          <LiveScreenshotStream 
+            agentId={agent.id} 
+            width={640} 
+            height={400}
+            framerate={(agent as any)?.config?.framerate || 2}
+          />
         </div>
 
         

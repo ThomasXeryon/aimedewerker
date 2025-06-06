@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import {
   Form,
   FormControl,
@@ -36,6 +37,8 @@ import {
 const createAgentSchema = insertAgentSchema.omit({
   organizationId: true,
   createdBy: true,
+}).extend({
+  framerate: z.number().min(0.5).max(10).default(2),
 });
 
 type CreateAgentData = z.infer<typeof createAgentSchema>;
@@ -60,6 +63,7 @@ export function CreateAgentModal({ open, onOpenChange }: CreateAgentModalProps) 
       schedule: "manual",
       priority: "normal",
       status: "inactive",
+      framerate: 2,
     },
   });
 
