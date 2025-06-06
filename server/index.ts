@@ -41,10 +41,17 @@ app.use((req, res, next) => {
   
   // Set up WebSocket server for screenshot streaming
   import('ws').then(({ WebSocketServer }) => {
-    const wss = new WebSocketServer({ server, path: '/ws/screenshots' });
+    const wss = new WebSocketServer({ 
+      server, 
+      path: '/api/ws/screenshots',
+      verifyClient: (info) => {
+        console.log('WebSocket connection attempt from:', info.origin);
+        return true;
+      }
+    });
     
-    wss.on('connection', (ws: any) => {
-      console.log('✓ Screenshot stream client connected');
+    wss.on('connection', (ws: any, req: any) => {
+      console.log('✓ Screenshot stream client connected from:', req.url);
       
       ws.on('message', (message: any) => {
         try {
@@ -67,8 +74,12 @@ app.use((req, res, next) => {
       });
     });
 
+    wss.on('error', (error) => {
+      console.error('❌ WebSocket Server error:', error);
+    });
+
     (globalThis as any).screenshotWss = wss;
-    console.log('WebSocket screenshot server initialized');
+    console.log('WebSocket screenshot server initialized on /api/ws/screenshots');
   });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

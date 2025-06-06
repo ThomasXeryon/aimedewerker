@@ -16,7 +16,7 @@ export function LiveScreenshotStream({
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/screenshots`;
+    const wsUrl = `${protocol}//${window.location.host}/api/ws/screenshots`;
     console.log(`Attempting WebSocket connection to: ${wsUrl}`);
     const socket = new WebSocket(wsUrl);
 
@@ -35,10 +35,13 @@ export function LiveScreenshotStream({
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'screenshot' && data.data) {
+          console.log('📸 Received screenshot from WebSocket');
           setFrame("data:image/png;base64," + data.data);
         }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
+        // Fallback: try treating as raw base64 data
+        setFrame("data:image/png;base64," + event.data);
       }
     };
 
