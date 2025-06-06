@@ -138,7 +138,7 @@ class AIService {
             role: "user",
             content: [
               {
-                type: "text",
+                type: "input_text",
                 text: `Complete this task: ${agent.instructions}`
               },
               {
@@ -528,18 +528,23 @@ class AIService {
   }
 
   private streamScreenshotToClients(screenshot: string): void {
-    const wss = globalThis.screenshotWss;
-    if (wss) {
-      wss.clients.forEach((ws: any) => {
-        if (ws.readyState === 1) { // WebSocket.OPEN
-          try {
-            ws.send(screenshot);
-          } catch (error) {
-            console.error('Error streaming screenshot:', error);
-          }
+    const wss = (globalThis as any).screenshotWss;
+    if (!wss) return;
+
+    // Broadcast screenshot to all connected WebSocket clients
+    wss.clients.forEach((client: any) => {
+      if (client.readyState === 1) { // WebSocket.OPEN
+        try {
+          client.send(JSON.stringify({
+            type: 'screenshot',
+            data: screenshot,
+            timestamp: Date.now()
+          }));
+        } catch (error) {
+          console.error('Error streaming screenshot:', error);
         }
-      });
-    }
+      }
+    });
   }
 
   private async cleanupExecutionContext(executionId: number): Promise<void> {

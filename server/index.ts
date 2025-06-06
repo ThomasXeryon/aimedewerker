@@ -37,7 +37,35 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  const server = registerRoutes(app);
+  
+  // Set up WebSocket server for screenshot streaming
+  import('ws').then(({ WebSocketServer }) => {
+    const wss = new WebSocketServer({ server, path: '/ws/screenshots' });
+    
+    wss.on('connection', (ws: any) => {
+      console.log('Screenshot stream client connected');
+      
+      ws.on('message', (message: any) => {
+        try {
+          const data = JSON.parse(message.toString());
+          if (data.type === 'subscribe' && data.agentId) {
+            ws.agentId = data.agentId;
+            console.log(`Client subscribed to agent ${data.agentId} screenshots`);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      });
+
+      ws.on('close', () => {
+        console.log('Screenshot stream client disconnected');
+      });
+    });
+
+    (globalThis as any).screenshotWss = wss;
+    console.log('WebSocket screenshot server initialized');
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

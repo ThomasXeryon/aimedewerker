@@ -185,6 +185,14 @@ export function AgentChat({
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-0">
+        {/* Live Screenshot Stream */}
+        {execution && execution.status === 'running' && (
+          <div className="p-4 border-b">
+            <div className="text-sm font-medium mb-2">Live Browser View</div>
+            <LiveScreenshotStream agentId={agent.id} width={400} height={300} />
+          </div>
+        )}
+        
         <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
           <div className="space-y-4 pb-4">
             {messages.map((message) => (
