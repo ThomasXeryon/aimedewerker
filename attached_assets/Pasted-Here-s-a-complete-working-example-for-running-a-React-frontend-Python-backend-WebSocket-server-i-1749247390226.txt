@@ -1,0 +1,147 @@
+Here’s a complete working example for running a React frontend + Python backend (WebSocket server) inside Replit that shows live browser view or simulated screenshots streamed over WebSocket.
+
+✅ What this does
+React frontend connects to WebSocket on port 8765
+
+Python backend sends JPEG images (base64-encoded)
+
+WebSocket stream shows live screenshots in browser
+
+Designed for Replit (where React + Python run together)
+
+📁 Project Structure
+pgsql
+Copy
+Edit
+replit-react-websocket/
+├── backend/
+│   └── server.py
+├── frontend/
+│   ├── public/
+│   │   └── index.html
+│   ├── src/
+│   │   └── App.jsx
+│   └── package.json
+├── replit.nix
+└── README.md
+🐍 backend/server.py – Python WebSocket server
+python
+Copy
+Edit
+import asyncio
+import websockets
+import base64
+import io
+import time
+from PIL import Image
+
+async def get_screenshot():
+    # Simulated dynamic image; replace with real screenshot
+    img = Image.new("RGB", (640, 480), (int(time.time() * 10) % 255, 100, 150))
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG")
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+async def stream(websocket, path):
+    print(f"Client connected: {websocket.remote_address}")
+    try:
+        while True:
+            img_b64 = await get_screenshot()
+            await websocket.send(img_b64)
+            await asyncio.sleep(0.5)
+    except websockets.exceptions.ConnectionClosed:
+        print("Client disconnected")
+
+async def main():
+    print("Starting WebSocket server on port 8765")
+    async with websockets.serve(stream, "0.0.0.0", 8765):
+        await asyncio.Future()  # run forever
+
+if __name__ == "__main__":
+    asyncio.run(main())
+⚛️ frontend/src/App.jsx – React client
+jsx
+Copy
+Edit
+import React, { useEffect, useState } from "react";
+
+function App() {
+  const [imageSrc, setImageSrc] = useState("");
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://" + window.location.hostname + ":8765");
+
+    ws.onmessage = (event) => {
+      setImageSrc("data:image/jpeg;base64," + event.data);
+    };
+
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h1>Live Screenshot Stream</h1>
+      <img src={imageSrc} width="640" height="480" alt="Live" />
+    </div>
+  );
+}
+
+export default App;
+📦 frontend/package.json (partial)
+Make sure the frontend proxy is configured to connect to the backend:
+
+json
+Copy
+Edit
+{
+  "name": "react-websocket-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "scripts": {
+    "start": "react-scripts start"
+  },
+  "proxy": "http://localhost:8765"
+}
+🛠 replit.nix for Python + React support
+nix
+Copy
+Edit
+{ pkgs }: {
+  deps = [
+    pkgs.python311
+    pkgs.python311Packages.pillow
+    pkgs.python311Packages.websockets
+    pkgs.nodejs_20
+  ];
+}
+🏁 To Run on Replit
+In Shell, run:
+
+bash
+Copy
+Edit
+cd backend && python3 server.py
+In frontend shell or Replit UI, run:
+
+bash
+Copy
+Edit
+cd frontend && npm install && npm start
+If you're using Replit's "React + Python" template, merge this into the right folders (App.jsx and server.py).
+
+✅ Notes
+If Replit blocks port 8765 externally, use a WebSocket proxy via Express or FastAPI on port 3000/8080.
+
+If you want to replace the simulated screenshot, use Playwright, Selenium, or any other screenshot capture system inside get_screenshot().
+
+If this still breaks the handshake, send me your Replit link (or paste the Replit logs) and I’ll trace the problem in your exact setup.

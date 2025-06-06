@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateAgentModal } from "@/components/agents/create-agent-modal";
-import { AgentChat } from "@/components/agents/agent-chat";
+import { AgentChat } from "@/components/agents/agent-chat-fixed";
 import { Plus, Bot, Play, Pause, Square, Eye, Calendar } from "lucide-react";
 import { Agent, TaskExecution } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
