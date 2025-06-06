@@ -173,55 +173,7 @@ export function AgentChat({
           
           <div className="flex items-center gap-2">
             {!execution || execution.status === 'pending' ? (
-              <Button onClick={() => {
-              // Show demo of what the live automation looks like
-              setMessages(prev => [...prev, {
-                id: `demo-start-${Date.now()}`,
-                type: "system",
-                content: "Starting browser automation...",
-                timestamp: new Date()
-              }]);
-              
-              setTimeout(() => {
-                setMessages(prev => [...prev, {
-                  id: `demo-nav-${Date.now()}`,
-                  type: "agent", 
-                  content: `Navigating to ${agent.targetWebsite || 'target website'}`,
-                  timestamp: new Date()
-                }]);
-              }, 500);
-              
-              setTimeout(() => {
-                setMessages(prev => [...prev, {
-                  id: `demo-action-${Date.now()}`,
-                  type: "agent",
-                  content: "🤖 click at (150, 200) - Submit button",
-                  timestamp: new Date(),
-                  action: { type: 'click', x: 150, y: 200 }
-                }]);
-              }, 1500);
-              
-              setTimeout(() => {
-                setMessages(prev => [...prev, {
-                  id: `demo-screenshot-${Date.now()}`,
-                  type: "screenshot", 
-                  content: "Browser view after action",
-                  timestamp: new Date(),
-                  screenshot: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAKRJREFUKJGt0jEOgjAYBOAfLAytjfGBJsbCRBujhYUJJj6AxsdgY2KCiYW1sSGx8AGMBxALayssLKwtLCwsrC0sLKwtraxtbGwsLKwsLCwsLKwtrawtLCwsLKwsLCwsLKwsLCwsLCwsLCwsLCwsrK0srK0tLKysLSysLaysLSysrCysLaysLSysrCysLaysrSysLaysLSysrCysrK0srK0trCysrCys"
-                }]);
-              }, 2500);
-              
-              setTimeout(() => {
-                setMessages(prev => [...prev, {
-                  id: `demo-complete-${Date.now()}`,
-                  type: "system",
-                  content: "Task completed successfully",
-                  timestamp: new Date()
-                }]);
-              }, 3500);
-              
-              onStartExecution();
-            }} size="sm">
+              <Button onClick={onStartExecution} size="sm">
                 <Play className="w-4 h-4 mr-1" />
                 Start
               </Button>
