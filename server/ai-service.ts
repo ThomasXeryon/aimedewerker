@@ -116,9 +116,133 @@ class AIService {
     let screenshot = await this.takeScreenshot(page);
     context.screenshots.push(screenshot);
 
-    // For now, use a simplified approach until the Computer Use API is fully available
-    // This implements the core computer automation logic manually
-    let response = await this.processTaskWithVision(agent, screenshot);
+    try {
+      // Use OpenAI Computer Use API
+      let response = await openai.responses.create({
+        model: "computer-use-preview",
+        tools: [{
+          type: "computer_use_preview",
+          display_width: 1024,
+          display_height: 768,
+          environment: "browser"
+        }],
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `Complete this task: ${agent.instructions}
+                
+                Agent Type: ${agent.type}
+                Target Website: ${agent.targetWebsite || 'any website'}
+                
+                Use the computer to navigate, click, type, and complete the specified task.`
+              },
+              {
+                type: "input_image",
+                image_url: `data:image/png;base64,${screenshot}`,
+                detail: "high"
+              }
+            ]
+          }
+        ],
+        reasoning: {
+          summary: "concise"
+        },
+        truncation: "auto"
+      });
+
+      await this.processComputerUseResponse(context, response, screenshot);
+    } catch (error) {
+      console.log('OpenAI Computer Use API not available, using fallback vision processing');
+      let response = await this.processTaskWithVision(agent, screenshot);
+      await this.processLegacyResponse(context, response, screenshot);
+    }
+  }
+
+  private async processComputerUseResponse(context: ExecutionContext, response: any, screenshot: string): Promise<void> {
+    const { page } = context;
+    let iteration = 0;
+    const maxIterations = 20;
+
+    while (iteration < maxIterations) {
+      iteration++;
+
+      // Check for computer calls in the response
+      const computerCalls = response.output.filter((item: any) => item.type === "computer_call");
+      
+      if (computerCalls.length === 0) {
+        console.log('No computer calls found. Task complete.');
+        break;
+      }
+
+      // Process the first computer call
+      const computerCall = computerCalls[0];
+      const action = computerCall.action;
+      const callId = computerCall.call_id;
+
+      if (!action) {
+        console.log('No action in computer call');
+        break;
+      }
+
+      // Broadcast action to WebSocket clients
+      this.broadcastUpdate(context.agent.organizationId, {
+        type: 'agent_action',
+        agentId: context.agent.id,
+        executionId: context.execution.id,
+        action: action
+      });
+
+      console.log('Executing action:', action);
+      await this.executeAction(page, action);
+      context.actions.push(action);
+
+      // Take screenshot after action
+      screenshot = await this.takeScreenshot(page);
+      context.screenshots.push(screenshot);
+
+      // Broadcast screenshot to WebSocket clients
+      this.broadcastUpdate(context.agent.organizationId, {
+        type: 'agent_screenshot',
+        agentId: context.agent.id,
+        executionId: context.execution.id,
+        screenshot: screenshot
+      });
+
+      // Wait briefly between actions
+      await page.waitForTimeout(1000);
+
+      // Send screenshot back to continue the loop
+      response = await openai.responses.create({
+        model: "computer-use-preview",
+        previous_response_id: response.id,
+        tools: [{
+          type: "computer_use_preview",
+          display_width: 1024,
+          display_height: 768,
+          environment: "browser"
+        }],
+        input: [
+          {
+            call_id: callId,
+            type: "computer_call_output",
+            output: {
+              type: "computer_screenshot", 
+              image_url: `data:image/png;base64,${screenshot}`
+            }
+          }
+        ],
+        truncation: "auto"
+      });
+    }
+  }
+
+  private async processLegacyResponse(context: ExecutionContext, response: any, screenshot: string): Promise<void> {
+    const { agent, page } = context;
+    let iteration = 0;
+    const maxIterations = 20;
 
     while (iteration < maxIterations) {
       iteration++;
@@ -129,6 +253,14 @@ class AIService {
           break;
         }
 
+        // Broadcast action to WebSocket clients
+        this.broadcastUpdate(context.agent.organizationId, {
+          type: 'agent_action',
+          agentId: context.agent.id,
+          executionId: context.execution.id,
+          action: response.action
+        });
+
         console.log('Executing action:', response.action);
         await this.executeAction(page, response.action);
         context.actions.push(response.action);
@@ -136,6 +268,14 @@ class AIService {
         // Take screenshot after action
         screenshot = await this.takeScreenshot(page);
         context.screenshots.push(screenshot);
+
+        // Broadcast screenshot to WebSocket clients
+        this.broadcastUpdate(context.agent.organizationId, {
+          type: 'agent_screenshot',
+          agentId: context.agent.id,
+          executionId: context.execution.id,
+          screenshot: screenshot
+        });
 
         // Wait briefly between actions
         await page.waitForTimeout(1000);
@@ -151,6 +291,18 @@ class AIService {
 
     if (iteration >= maxIterations) {
       throw new Error('Maximum iterations reached without task completion');
+    }
+  }
+
+  private broadcastUpdate(organizationId: number, data: any): void {
+    // Import and use WebSocket broadcast functionality
+    const { broadcast } = require('./routes');
+    if (broadcast) {
+      broadcast({
+        type: 'update',
+        organizationId,
+        data
+      });
     }
   }
 
