@@ -59,13 +59,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const agent = await storage.createAgent(validatedData);
       res.status(201).json(agent);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
   app.get("/api/agents/:id", checkOrganizationAccess, async (req, res) => {
     const agent = await storage.getAgent(parseInt(req.params.id));
-    if (!agent || agent.organizationId !== req.user.organizationId) {
+    if (!agent || agent.organizationId !== req.user!.organizationId) {
       return res.sendStatus(404);
     }
     res.json(agent);
@@ -75,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const agentId = parseInt(req.params.id);
     const agent = await storage.getAgent(agentId);
     
-    if (!agent || agent.organizationId !== req.user.organizationId) {
+    if (!agent || agent.organizationId !== req.user!.organizationId) {
       return res.sendStatus(404);
     }
     
@@ -87,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const agentId = parseInt(req.params.id);
     const agent = await storage.getAgent(agentId);
     
-    if (!agent || agent.organizationId !== req.user.organizationId) {
+    if (!agent || agent.organizationId !== req.user!.organizationId) {
       return res.sendStatus(404);
     }
     
@@ -100,21 +100,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const agentId = parseInt(req.params.id);
     const agent = await storage.getAgent(agentId);
     
-    if (!agent || agent.organizationId !== req.user.organizationId) {
+    if (!agent || agent.organizationId !== req.user!.organizationId) {
       return res.sendStatus(404);
     }
     
     try {
       const execution = await taskQueue.addTask({
         agentId,
-        organizationId: req.user.organizationId,
+        organizationId: req.user!.organizationId,
         priority: agent.priority,
         manualTrigger: true,
       });
       
       res.json({ executionId: execution.id });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Broadcast updates to WebSocket clients
-  export function broadcastUpdate(organizationId: number, data: any) {
+  const broadcastUpdate = (organizationId: number, data: any) => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         // In a real implementation, check if client belongs to the organization
@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       }
     });
-  }
+  };
 
   return httpServer;
 }

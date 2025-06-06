@@ -44,11 +44,11 @@ export interface IStorage {
   createOrUpdateUsage(usage: InsertUsageTracking): Promise<UsageTracking>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
@@ -140,7 +140,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAgent(id: number): Promise<boolean> {
     const result = await db.delete(agents).where(eq(agents.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Task execution methods

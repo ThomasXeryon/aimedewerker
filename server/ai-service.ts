@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { playwright } from "playwright";
+import { chromium } from "playwright";
 import { Agent, TaskExecution } from "@shared/schema";
 import { storage } from "./storage";
 
@@ -75,7 +75,7 @@ class AIService {
   }
 
   private async createExecutionContext(agent: Agent, execution: TaskExecution): Promise<ExecutionContext> {
-    const browser = await playwright.chromium.launch({
+    const browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-dev-shm-usage'],
     });
