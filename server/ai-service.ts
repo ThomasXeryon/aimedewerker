@@ -113,6 +113,8 @@ class AIService {
     let iteration = 0;
 
     // Take initial screenshot
+    const viewport = page.viewportSize();
+    console.log(`Browser initialized with viewport: ${viewport.width}x${viewport.height}`);
     let screenshot = await this.takeScreenshot(page);
     context.screenshots.push(screenshot);
 

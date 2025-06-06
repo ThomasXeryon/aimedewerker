@@ -1,0 +1,135 @@
+✅ Full Setup for Replit: “Vision Video Agent” (gpt-4o fallback)
+🧩 backend/server.py — Streams screenshots like video
+python
+Copy
+Edit
+import asyncio
+import websockets
+import base64
+import io
+import time
+from PIL import Image
+from aiohttp import web
+import threading
+
+# Fake screenshot function (replace with real one)
+async def get_screenshot():
+    img = Image.new("RGB", (640, 480), (int(time.time()*50)%255, 150, 100))
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG")
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+async def stream(websocket):
+    print("Client connected")
+    try:
+        while True:
+            frame = await get_screenshot()
+            await websocket.send(frame)
+            await asyncio.sleep(0.3)  # 3 FPS simulated video
+    except websockets.exceptions.ConnectionClosed:
+        print("Client disconnected")
+
+async def main_ws():
+    print("Starting WebSocket video stream")
+    async with websockets.serve(stream, "0.0.0.0", 8765):
+        await asyncio.Future()
+
+# Minimal web UI (optional)
+async def handle_ui(request):
+    return web.FileResponse('./index.html')
+
+def start_http():
+    app = web.Application()
+    app.router.add_get("/", handle_ui)
+    web.run_app(app, port=8080)
+
+if __name__ == "__main__":
+    threading.Thread(target=start_http, daemon=True).start()
+    asyncio.run(main_ws())
+⚛️ frontend/src/App.jsx — React frontend to show the stream
+jsx
+Copy
+Edit
+import React, { useEffect, useState } from "react";
+
+function App() {
+  const [frame, setFrame] = useState("");
+
+  useEffect(() => {
+    const socket = new WebSocket("ws://" + window.location.hostname + ":8765");
+
+    socket.onmessage = (event) => {
+      setFrame("data:image/jpeg;base64," + event.data);
+    };
+
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
+    return () => socket.close();
+  }, []);
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h1>GPT-4o Vision Video Stream</h1>
+      <img src={frame} width="640" height="480" alt="Live Stream" />
+    </div>
+  );
+}
+
+export default App;
+📦 frontend/package.json
+Make sure it includes:
+
+json
+Copy
+Edit
+{
+  "name": "gpt-4o-vision-stream",
+  "proxy": "http://localhost:8080"
+}
+🛠 replit.nix dependencies
+nix
+Copy
+Edit
+{ pkgs }: {
+  deps = [
+    pkgs.python311
+    pkgs.python311Packages.pillow
+    pkgs.python311Packages.websockets
+    pkgs.python311Packages.aiohttp
+    pkgs.nodejs_20
+  ];
+}
+🧠 How to Use GPT-4o with Frames
+In a separate worker (or just periodically), send screenshots to GPT-4o like this:
+
+python
+Copy
+Edit
+from openai import OpenAI
+client = OpenAI()
+
+def analyze_image(base64_jpg):
+    result = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What action should I take in this interface?"},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_jpg}"}}
+                ]
+            }
+        ]
+    )
+    return result.choices[0].message.content
+Send that result to your automation handler (click, type, etc).
+
+🧩 Bonus: Architecture Summary
+Component	Purpose
+server.py	Simulates video stream (via WS)
+App.jsx	Displays the stream in browser
+gpt-4o	Analyzes snapshots for action
+Custom logic	Executes GPT-4o suggested actions
+
