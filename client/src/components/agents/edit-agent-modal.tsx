@@ -55,33 +55,55 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     },
   });
 
-  // Reset form when agent changes
+  // Reset form when agent changes or modal opens
   useEffect(() => {
-    if (agent) {
+    if (agent && open) {
+      let config: any = {};
+      try {
+        if (agent.config && typeof agent.config === 'string') {
+          config = JSON.parse(agent.config);
+        }
+      } catch (e) {
+        console.warn('Failed to parse agent config:', e);
+        config = {};
+      }
+      
       form.reset({
         name: agent.name || "",
         description: agent.description || "",
         instructions: agent.instructions || "",
         priority: agent.priority || "normal",
-        framerate: (agent as any)?.config?.framerate || 2,
+        framerate: config.framerate || 2,
       });
     }
-  }, [agent, form]);
+  }, [agent, open, form]);
 
   const updateAgentMutation = useMutation({
     mutationFn: async (data: EditAgentData) => {
       if (!agent) throw new Error("No agent to update");
-      const res = await apiRequest("PATCH", `/api/agents/${agent.id}`, data);
+      
+      // Prepare update payload with config
+      const updatePayload = {
+        name: data.name,
+        description: data.description,
+        instructions: data.instructions,
+        priority: data.priority,
+        config: JSON.stringify({
+          framerate: data.framerate
+        })
+      };
+      
+      const res = await apiRequest("PATCH", `/api/agents/${agent.id}`, updatePayload);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/executions"] });
       toast({
         title: "Agent updated",
         description: "Changes have been saved successfully",
       });
       onOpenChange(false);
-      form.reset();
     },
     onError: (error: Error) => {
       toast({

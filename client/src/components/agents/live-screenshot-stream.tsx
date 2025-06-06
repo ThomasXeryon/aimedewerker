@@ -27,21 +27,20 @@ export function LiveScreenshotStream({
     };
 
     eventSource.onmessage = (event) => {
-      console.log(`[LiveStream] Message received:`, event.data.substring(0, 100) + '...');
       try {
         const data = JSON.parse(event.data);
-        console.log(`[LiveStream] Parsed message type: ${data.type}`);
         
-        if (data.type === 'agent_screenshot' && data.screenshot) {
-          console.log(`[LiveStream] Screenshot received, length: ${data.screenshot.length}`);
+        if (data.type === 'agent_screenshot' && data.screenshot && data.agentId === agentId) {
+          console.log(`[LiveStream] Screenshot received for agent ${agentId}, length: ${data.screenshot.length}`);
           setFrame("data:image/png;base64," + data.screenshot);
           setLastUpdate(Date.now());
         } else if (data.type === 'connected') {
-          console.log(`[LiveStream] Initial connection confirmed for agent ${data.agentId}`);
+          console.log(`[LiveStream] Connection confirmed for agent ${data.agentId}`);
+        } else if (data.type === 'keepalive') {
+          // Keepalive message, no action needed
         }
       } catch (error) {
         console.error('[LiveStream] Parse error:', error);
-        console.log('[LiveStream] Raw data:', event.data);
       }
     };
 
