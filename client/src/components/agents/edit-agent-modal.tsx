@@ -45,6 +45,8 @@ interface EditAgentModalProps {
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
   
+  console.log('EditAgentModal rendered:', { open, agent: agent?.name });
+  
 
 
   const form = useForm<EditAgentData>({
@@ -60,6 +62,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
 
   // Reset form when agent changes or modal opens
   useEffect(() => {
+    console.log('EditAgentModal useEffect:', { open, agent: agent?.name });
     if (agent) {
       let config: any = {};
       try {
@@ -125,8 +128,14 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
   if (!open || !agent) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      console.log('Dialog onOpenChange called:', { newOpen, currentOpen: open });
+      if (!newOpen) {
+        // Only close if user explicitly requested it
+        onOpenChange(newOpen);
+      }
+    }}>
+      <DialogContent className="sm:max-w-[600px]" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Edit Agent: {agent.name}</DialogTitle>
           <DialogDescription>
