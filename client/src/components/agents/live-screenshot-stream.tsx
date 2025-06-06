@@ -29,7 +29,14 @@ export function LiveScreenshotStream({
     };
 
     socket.onmessage = (event) => {
-      setFrame("data:image/png;base64," + event.data);
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'screenshot' && data.data) {
+          setFrame("data:image/png;base64," + data.data);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
     };
 
     socket.onerror = (err) => {
