@@ -134,13 +134,9 @@ export default function Agents() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        e.nativeEvent.stopImmediatePropagation();
                         console.log('Edit button clicked for agent:', selectedAgent);
-                        // Use setTimeout to ensure state updates don't conflict
-                        setTimeout(() => {
-                          setEditingAgent(selectedAgent);
-                          setEditModalOpen(true);
-                        }, 0);
+                        setEditingAgent(selectedAgent);
+                        setEditModalOpen(true);
                       }}
                     >
                       <Edit className="w-4 h-4" />

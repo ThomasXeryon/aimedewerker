@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ interface EditAgentModalProps {
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -27,9 +29,11 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     framerate: 2
   });
 
-  // Update form data when agent changes
+  // Use internal state to control modal visibility
   useEffect(() => {
-    if (agent && open) {
+    if (open && agent) {
+      setInternalOpen(true);
+      
       let config: any = {};
       try {
         if (agent.config && typeof agent.config === 'string') {
@@ -46,11 +50,20 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         priority: agent.priority || "normal",
         framerate: config.framerate || 2
       });
+    } else {
+      setInternalOpen(false);
     }
-  }, [agent, open]);
+  }, [open, agent]);
+
+  const handleClose = () => {
+    setInternalOpen(false);
+    setTimeout(() => onOpenChange(false), 100);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     if (!agent) return;
 
     setIsLoading(true);
@@ -73,7 +86,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         title: "Agent updated",
         description: "Changes have been saved successfully",
       });
-      onOpenChange(false);
+      handleClose();
     } catch (error: any) {
       toast({
         title: "Failed to update agent",
@@ -85,17 +98,39 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     }
   };
 
-  if (!open || !agent) return null;
+  // Only render if we have both internal state and agent
+  if (!internalOpen || !agent) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
-      onClick={(e) => e.target === e.currentTarget && onOpenChange(false)}
+      className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleClose();
+        }
+      }}
     >
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-auto">
+      <div 
+        className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-auto"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">Edit Agent: {agent.name}</h2>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>×</Button>
+          <Button 
+            variant="ghost" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleClose();
+            }}
+          >
+            ×
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -167,7 +202,11 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleClose();
+              }}
             >
               Cancel
             </Button>
