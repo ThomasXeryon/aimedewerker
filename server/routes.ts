@@ -78,8 +78,12 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
+      const { framerate, ...agentData } = req.body;
+      const config = { framerate: framerate || 2 };
+      
       const validatedData = insertAgentSchema.parse({
-        ...req.body,
+        ...agentData,
+        config,
         organizationId: req.user.organizationId,
         createdBy: req.user.id,
       });
