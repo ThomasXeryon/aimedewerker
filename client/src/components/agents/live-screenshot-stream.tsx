@@ -18,53 +18,92 @@ export function LiveScreenshotStream({
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   useEffect(() => {
-    console.log(`[LiveStream] Setting up SSE for agent ${agentId}`);
-    const eventSource = new EventSource(`/api/events/${agentId}`);
-    
-    eventSource.onopen = () => {
-      console.log(`[LiveStream] Connected to agent ${agentId}`);
-      setIsConnected(true);
-    };
+    let eventSource: EventSource | null = null;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+    let mounted = true;
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'agent_screenshot' && data.screenshot && data.agentId === agentId) {
-          console.log(`[LiveStream] Screenshot received for agent ${agentId}, length: ${data.screenshot.length}`);
-          
-          // Test if this is valid base64 PNG data
-          const isValidPNG = data.screenshot.startsWith('iVBORw0KGgo');
-          console.log(`[LiveStream] Valid PNG header:`, isValidPNG);
-          
-          if (isValidPNG) {
-            const imageData = "data:image/png;base64," + data.screenshot;
-            setFrame(imageData);
-            setLastUpdate(Date.now());
-            console.log(`[LiveStream] Frame set successfully for agent ${agentId}`);
-          } else {
-            console.error(`[LiveStream] Invalid PNG data for agent ${agentId}`, data.screenshot.substring(0, 50));
-          }
-        } else if (data.type === 'connected') {
-          console.log(`[LiveStream] Connection confirmed for agent ${data.agentId}`);
-        } else if (data.type === 'keepalive') {
-          // Keepalive message, no action needed
-        } else {
-          console.log(`[LiveStream] Received unknown event type:`, data.type, 'for agent:', data.agentId);
+    const connect = () => {
+      if (!mounted) return;
+      
+      console.log(`[LiveStream] Connecting to agent ${agentId}`);
+      eventSource = new EventSource(`/api/events/${agentId}`);
+      
+      eventSource.onopen = () => {
+        console.log(`[LiveStream] Connected to agent ${agentId}`);
+        setIsConnected(true);
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
         }
-      } catch (error) {
-        console.error('[LiveStream] Parse error:', error);
-      }
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'agent_screenshot' && data.screenshot && data.agentId === agentId) {
+            console.log(`[LiveStream] Screenshot received for agent ${agentId}, length: ${data.screenshot.length}`);
+            
+            // Test if this is valid base64 PNG data
+            const isValidPNG = data.screenshot.startsWith('iVBORw0KGgo');
+            console.log(`[LiveStream] Valid PNG header:`, isValidPNG);
+            
+            if (isValidPNG) {
+              const imageData = "data:image/png;base64," + data.screenshot;
+              setFrame(imageData);
+              setLastUpdate(Date.now());
+              console.log(`[LiveStream] Frame set successfully for agent ${agentId}`);
+            } else {
+              console.error(`[LiveStream] Invalid PNG data for agent ${agentId}`, data.screenshot.substring(0, 50));
+            }
+          } else if (data.type === 'connected') {
+            console.log(`[LiveStream] Connection confirmed for agent ${data.agentId}`);
+          } else if (data.type === 'keepalive') {
+            // Keepalive message, no action needed
+          } else {
+            console.log(`[LiveStream] Received unknown event type:`, data.type, 'for agent:', data.agentId);
+          }
+        } catch (error) {
+          console.error('[LiveStream] Parse error:', error);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.error("[LiveStream] SSE error:", err);
+        setIsConnected(false);
+        
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        
+        // Reconnect after 3 seconds if still mounted
+        if (mounted && !reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            if (mounted) {
+              console.log(`[LiveStream] Reconnecting to agent ${agentId}`);
+              connect();
+            }
+          }, 3000);
+        }
+      };
     };
 
-    eventSource.onerror = (err) => {
-      console.error("[LiveStream] SSE error:", err);
-      setIsConnected(false);
-    };
+    connect();
 
     return () => {
-      console.log(`[LiveStream] Closing SSE for agent ${agentId}`);
-      eventSource.close();
+      mounted = false;
+      console.log(`[LiveStream] Cleaning up for agent ${agentId}`);
+      
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      
+      if (eventSource) {
+        eventSource.close();
+      }
+      
+      setIsConnected(false);
     };
   }, [agentId]);
 
