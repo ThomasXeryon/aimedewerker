@@ -86,13 +86,8 @@ export function AgentChat({
               break;
 
             case 'agent_screenshot':
-              setMessages(prev => [...prev, {
-                id: `screenshot-${Date.now()}`,
-                type: "screenshot",
-                content: "Browser view",
-                timestamp: new Date(),
-                screenshot: data.screenshot
-              }]);
+              // Screenshots are handled by the LiveScreenshotStream component
+              // Don't add them to chat messages to avoid clutter
               break;
           }
         } catch (error) {
@@ -194,7 +189,19 @@ export function AgentChat({
             agentId={agent.id} 
             width={640} 
             height={400}
-            framerate={(agent as any)?.config?.framerate || 2}
+            framerate={(() => {
+              let config: any = {};
+              try {
+                if (agent.config) {
+                  if (typeof agent.config === 'string') {
+                    config = JSON.parse(agent.config);
+                  } else if (typeof agent.config === 'object') {
+                    config = agent.config;
+                  }
+                }
+              } catch (e) {}
+              return config.framerate || 2;
+            })()}
           />
         </div>
 
@@ -227,29 +234,19 @@ export function AgentChat({
                     </span>
                   </div>
                   
-                  {message.screenshot ? (
-                    <div className="border rounded-lg overflow-hidden">
-                      <img 
-                        src={`data:image/png;base64,${message.screenshot}`}
-                        alt="Browser screenshot"
-                        className="w-full max-w-md"
-                      />
-                    </div>
-                  ) : (
-                    <div className={`rounded-lg p-3 ${
-                      message.type === "user" 
-                        ? "bg-blue-500 text-white ml-8" 
-                        : "bg-muted"
-                    }`}>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      
-                      {message.action && (
-                        <div className="mt-2 p-2 bg-black/10 rounded text-xs">
-                          <code>{JSON.stringify(message.action, null, 2)}</code>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className={`rounded-lg p-3 ${
+                    message.type === "user" 
+                      ? "bg-blue-500 text-white ml-8" 
+                      : "bg-muted"
+                  }`}>
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    
+                    {message.action && (
+                      <div className="mt-2 p-2 bg-black/10 rounded text-xs">
+                        <code>{JSON.stringify(message.action, null, 2)}</code>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
