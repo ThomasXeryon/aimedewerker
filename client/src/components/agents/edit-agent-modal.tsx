@@ -19,7 +19,10 @@ interface EditAgentModalProps {
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  
+  // Force the modal to stay open once opened by using internal state
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [internalAgent, setInternalAgent] = useState<Agent | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -29,11 +32,12 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     framerate: 2
   });
 
-  // Update form data when agent changes
+  // Only update internal state when props change AND we're trying to open
   useEffect(() => {
-    if (agent && open) {
-      console.log('EditAgentModal: Setting up form for agent:', agent.name);
-      setModalVisible(true);
+    if (open && agent && !internalOpen) {
+      console.log('EditAgentModal: Opening for agent:', agent.name);
+      setInternalOpen(true);
+      setInternalAgent(agent);
       
       let config: any = {};
       try {
@@ -51,14 +55,13 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         priority: agent.priority || "normal",
         framerate: config.framerate || 2
       });
-    } else {
-      setModalVisible(false);
     }
-  }, [agent, open]);
+  }, [open, agent, internalOpen]);
 
   const handleClose = () => {
-    console.log('EditAgentModal: handleClose called');
-    setModalVisible(false);
+    console.log('EditAgentModal: Closing modal');
+    setInternalOpen(false);
+    setInternalAgent(null);
     onOpenChange(false);
   };
 
@@ -66,7 +69,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     e.preventDefault();
     e.stopPropagation();
     
-    if (!agent) return;
+    if (!internalAgent) return;
 
     setIsLoading(true);
     try {
@@ -80,7 +83,7 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         })
       };
 
-      await apiRequest("PATCH", `/api/agents/${agent.id}`, updatePayload);
+      await apiRequest("PATCH", `/api/agents/${internalAgent.id}`, updatePayload);
 
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/executions"] });
@@ -100,39 +103,29 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     }
   };
 
-  // Only render if internal state says modal should be visible
-  if (!modalVisible || !agent) return null;
+  // Only render based on internal state
+  if (!internalOpen || !internalAgent) {
+    return null;
+  }
 
-  console.log('EditAgentModal: Rendering modal for agent:', agent.name);
+  console.log('EditAgentModal: Rendering for agent:', internalAgent.name);
 
   return (
     <div 
       className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
-          e.preventDefault();
-          e.stopPropagation();
           handleClose();
         }
       }}
     >
       <div 
         className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-auto"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Edit Agent: {agent.name}</h2>
-          <Button 
-            variant="ghost" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleClose();
-            }}
-          >
+          <h2 className="text-xl font-semibold">Edit Agent: {internalAgent.name}</h2>
+          <Button variant="ghost" onClick={handleClose}>
             ×
           </Button>
         </div>
@@ -203,21 +196,10 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleClose();
-              }}
-            >
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isLoading}
-            >
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? "Updating..." : "Update Agent"}
             </Button>
           </div>
