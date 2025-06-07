@@ -32,12 +32,25 @@ export function LiveScreenshotStream({
         
         if (data.type === 'agent_screenshot' && data.screenshot && data.agentId === agentId) {
           console.log(`[LiveStream] Screenshot received for agent ${agentId}, length: ${data.screenshot.length}`);
-          setFrame("data:image/png;base64," + data.screenshot);
-          setLastUpdate(Date.now());
+          
+          // Test if this is valid base64 PNG data
+          const isValidPNG = data.screenshot.startsWith('iVBORw0KGgo');
+          console.log(`[LiveStream] Valid PNG header:`, isValidPNG);
+          
+          if (isValidPNG) {
+            const imageData = "data:image/png;base64," + data.screenshot;
+            setFrame(imageData);
+            setLastUpdate(Date.now());
+            console.log(`[LiveStream] Frame set successfully for agent ${agentId}`);
+          } else {
+            console.error(`[LiveStream] Invalid PNG data for agent ${agentId}`, data.screenshot.substring(0, 50));
+          }
         } else if (data.type === 'connected') {
           console.log(`[LiveStream] Connection confirmed for agent ${data.agentId}`);
         } else if (data.type === 'keepalive') {
           // Keepalive message, no action needed
+        } else {
+          console.log(`[LiveStream] Received unknown event type:`, data.type, 'for agent:', data.agentId);
         }
       } catch (error) {
         console.error('[LiveStream] Parse error:', error);
@@ -68,12 +81,19 @@ export function LiveScreenshotStream({
           src={frame} 
           alt="Live Agent View" 
           className="w-full h-full object-contain"
+          onLoad={() => console.log(`[LiveStream] Image loaded successfully for agent ${agentId}`)}
+          onError={(e) => console.error(`[LiveStream] Image load error for agent ${agentId}:`, e)}
         />
       ) : (
         <div className="flex items-center justify-center h-full text-white/70">
           {isConnected ? 'Waiting for screenshots...' : 'Connecting to stream...'}
         </div>
       )}
+      
+      {/* Debug info */}
+      <div className="absolute top-6 right-2 text-xs text-white/70 bg-black/70 px-2 py-1 rounded">
+        {frame ? `Frame: ${frame.length} chars` : 'No frame'}
+      </div>
       
       {/* Status indicator */}
       <div className="absolute bottom-2 left-2 text-xs text-white/70 bg-black/50 px-2 py-1 rounded">
