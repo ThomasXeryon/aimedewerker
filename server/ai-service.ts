@@ -26,6 +26,8 @@ interface ExecutionContext {
   page: any; // Playwright page
   screenshots: string[];
   actions: ComputerAction[];
+  framerate: number;
+  delayBetweenActions: number;
 }
 
 class AIService {
@@ -96,12 +98,30 @@ class AIService {
     const targetUrl = agent.targetWebsite || 'https://example.com';
     await page.goto(targetUrl);
 
+    // Parse agent config for framerate
+    let config: any = {};
+    try {
+      if (agent.config) {
+        if (typeof agent.config === 'string') {
+          config = JSON.parse(agent.config);
+        } else if (typeof agent.config === 'object') {
+          config = agent.config;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse agent config:', e);
+    }
+    const framerate = config.framerate || 2;
+    const delayBetweenActions = 1000 / framerate;
+
     const context: ExecutionContext = {
       agent,
       execution,
       page,
       screenshots: [],
       actions: [],
+      framerate,
+      delayBetweenActions,
     };
 
     return context;
@@ -111,6 +131,8 @@ class AIService {
     const { agent, page } = context;
     let maxIterations = 20; // Prevent infinite loops
     let iteration = 0;
+
+    console.log(`Agent framerate: ${context.framerate} FPS, delay: ${context.delayBetweenActions}ms`);
 
     // Take initial screenshot
     const viewport = page.viewportSize();
@@ -290,8 +312,8 @@ class AIService {
           screenshot: screenshot
         });
 
-        // Wait briefly between actions
-        await page.waitForTimeout(1000);
+        // Wait based on configured framerate before next action
+        await page.waitForTimeout(context.delayBetweenActions);
 
         // Get next action based on new screenshot
         response = await this.processTaskWithVision(agent, screenshot);
