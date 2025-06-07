@@ -19,7 +19,6 @@ interface EditAgentModalProps {
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [internalOpen, setInternalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -29,11 +28,9 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     framerate: 2
   });
 
-  // Use internal state to control modal visibility
+  // Update form data when agent changes
   useEffect(() => {
     if (open && agent) {
-      setInternalOpen(true);
-      
       let config: any = {};
       try {
         if (agent.config && typeof agent.config === 'string') {
@@ -50,14 +47,11 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         priority: agent.priority || "normal",
         framerate: config.framerate || 2
       });
-    } else {
-      setInternalOpen(false);
     }
   }, [open, agent]);
 
   const handleClose = () => {
-    setInternalOpen(false);
-    setTimeout(() => onOpenChange(false), 100);
+    onOpenChange(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,8 +92,8 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     }
   };
 
-  // Only render if we have both internal state and agent
-  if (!internalOpen || !agent) return null;
+  // Only render if open and we have an agent
+  if (!open || !agent) return null;
 
   return (
     <div 

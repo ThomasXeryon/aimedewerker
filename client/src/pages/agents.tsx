@@ -105,10 +105,10 @@ export default function Agents() {
     return (
       <div className="min-h-screen flex">
         <Sidebar />
-        
+
         <div className="flex-1 flex flex-col">
           <Header />
-          
+
           <main className="flex-1 flex">
             <div className="w-1/3 p-6 border-r bg-slate-50">
               <div className="mb-4">
@@ -120,7 +120,7 @@ export default function Agents() {
                   ← Back to Agents
                 </Button>
               </div>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -200,7 +200,7 @@ export default function Agents() {
                 </CardContent>
               </Card>
             </div>
-            
+
             <div className="flex-1 p-6">
               <AgentChat
                 agent={selectedAgent}
@@ -219,10 +219,10 @@ export default function Agents() {
   return (
     <div className="min-h-screen flex">
       <Sidebar />
-      
+
       <div className="flex-1 flex flex-col">
         <Header />
-        
+
         <main className="flex-1 p-6 overflow-auto bg-slate-50">
           <div className="mb-8 flex items-center justify-between">
             <div>
@@ -262,7 +262,7 @@ export default function Agents() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {agents.map((agent) => {
                 const recentExecution = executions.find(e => e.agentId === agent.id) || undefined;
-                
+
                 return (
                   <Card key={agent.id} className="hover:shadow-md transition-shadow cursor-pointer">
                     <CardHeader>
@@ -276,18 +276,18 @@ export default function Agents() {
                         </Badge>
                       </div>
                     </CardHeader>
-                    
+
                     <CardContent className="space-y-4">
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Type</p>
                         <p className="text-sm font-medium">{agent.type}</p>
                       </div>
-                      
+
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Target</p>
                         <p className="text-sm font-medium">{agent.targetWebsite || 'Any website'}</p>
                       </div>
-                      
+
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Instructions</p>
                         <p className="text-sm line-clamp-2">{agent.instructions}</p>
@@ -304,7 +304,7 @@ export default function Agents() {
                           </div>
                         </div>
                       )}
-                      
+
                       <div className="flex gap-2 pt-4">
                         <Button 
                           size="sm" 
@@ -339,12 +339,12 @@ export default function Agents() {
           )}
         </main>
       </div>
-      
+
       <CreateAgentModal 
         open={createModalOpen} 
         onOpenChange={setCreateModalOpen} 
       />
-      
+
       <EditAgentModal
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
