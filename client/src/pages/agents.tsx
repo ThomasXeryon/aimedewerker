@@ -21,6 +21,23 @@ export default function Agents() {
   const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null);
   const { toast } = useToast();
 
+  // Force edit modal to stay open once opened
+  const handleEditClick = (agent: Agent) => {
+    console.log('handleEditClick called for:', agent.name);
+    setEditingAgent(agent);
+    setEditModalOpen(true);
+    // Prevent any other events from interfering
+    setTimeout(() => {
+      console.log('Edit modal should be open now');
+    }, 50);
+  };
+
+  const handleEditModalClose = () => {
+    console.log('handleEditModalClose called');
+    setEditModalOpen(false);
+    setEditingAgent(null);
+  };
+
 
 
   const { data: agents = [], isLoading } = useQuery<Agent[]>({
@@ -134,9 +151,9 @@ export default function Agents() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        e.nativeEvent.stopImmediatePropagation();
                         console.log('Edit button clicked for agent:', selectedAgent);
-                        setEditingAgent(selectedAgent);
-                        setEditModalOpen(true);
+                        handleEditClick(selectedAgent);
                       }}
                     >
                       <Edit className="w-4 h-4" />
@@ -347,7 +364,7 @@ export default function Agents() {
 
       <EditAgentModal
         open={editModalOpen}
-        onOpenChange={setEditModalOpen}
+        onOpenChange={handleEditModalClose}
         agent={editingAgent}
       />
     </div>

@@ -19,6 +19,7 @@ interface EditAgentModalProps {
 export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -30,7 +31,10 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
 
   // Update form data when agent changes
   useEffect(() => {
-    if (open && agent) {
+    if (agent && open) {
+      console.log('EditAgentModal: Setting up form for agent:', agent.name);
+      setModalVisible(true);
+      
       let config: any = {};
       try {
         if (agent.config && typeof agent.config === 'string') {
@@ -47,10 +51,14 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
         priority: agent.priority || "normal",
         framerate: config.framerate || 2
       });
+    } else {
+      setModalVisible(false);
     }
-  }, [open, agent]);
+  }, [agent, open]);
 
   const handleClose = () => {
+    console.log('EditAgentModal: handleClose called');
+    setModalVisible(false);
     onOpenChange(false);
   };
 
@@ -92,8 +100,10 @@ export function EditAgentModal({ open, onOpenChange, agent }: EditAgentModalProp
     }
   };
 
-  // Only render if open and we have an agent
-  if (!open || !agent) return null;
+  // Only render if internal state says modal should be visible
+  if (!modalVisible || !agent) return null;
+
+  console.log('EditAgentModal: Rendering modal for agent:', agent.name);
 
   return (
     <div 
