@@ -131,21 +131,9 @@ export default function Agents() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bot className="w-5 h-5" />
-                      {selectedAgent.name}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(selectedAgent);
-                      }}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="w-5 h-5" />
+                    {selectedAgent.name}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -161,6 +149,28 @@ export default function Agents() {
                     <div>
                       <span className="text-sm font-medium">Instructions:</span>
                       <p className="text-sm text-muted-foreground">{selectedAgent.instructions}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Priority:</span>
+                      <p className="text-sm text-muted-foreground capitalize">{selectedAgent.priority || 'normal'}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Framerate:</span>
+                      <p className="text-sm text-muted-foreground">
+                        {(() => {
+                          let config: any = {};
+                          try {
+                            if (selectedAgent.config) {
+                              if (typeof selectedAgent.config === 'string') {
+                                config = JSON.parse(selectedAgent.config);
+                              } else if (typeof selectedAgent.config === 'object') {
+                                config = selectedAgent.config;
+                              }
+                            }
+                          } catch (e) {}
+                          return `${config.framerate || 2} FPS`;
+                        })()}
+                      </p>
                     </div>
                     <div>
                       <span className="text-sm font-medium">Status:</span>

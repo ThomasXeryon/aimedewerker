@@ -33,8 +33,12 @@ export function AgentEditOverlay({ agent, onClose }: AgentEditOverlayProps) {
       // Parse config for framerate
       let config: any = {};
       try {
-        if (agent.config && typeof agent.config === 'string') {
-          config = JSON.parse(agent.config);
+        if (agent.config) {
+          if (typeof agent.config === 'string') {
+            config = JSON.parse(agent.config);
+          } else if (typeof agent.config === 'object') {
+            config = agent.config;
+          }
         }
       } catch (e) {
         console.warn('Failed to parse agent config:', e);
@@ -58,12 +62,19 @@ export function AgentEditOverlay({ agent, onClose }: AgentEditOverlayProps) {
         config: JSON.stringify({ framerate })
       };
 
-      await apiRequest("PATCH", `/api/agents/${agent.id}`, updateData);
+      const response = await apiRequest("PATCH", `/api/agents/${agent.id}`, updateData);
+      const updatedAgent = await response.json();
+      
+      // Update the query cache with the new data
+      queryClient.setQueryData(["/api/agents"], (oldData: any[]) => {
+        if (!oldData) return oldData;
+        return oldData.map(a => a.id === agent.id ? updatedAgent : a);
+      });
       
       queryClient.invalidateQueries({ queryKey: ["/api/agents"] });
       toast({
         title: "Agent updated successfully",
-        description: "Your changes have been saved",
+        description: `${updatedAgent.name} has been saved with your changes`,
       });
       onClose();
     } catch (error: any) {
