@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateAgentModal } from "@/components/agents/create-agent-modal";
-import { EditAgentModal } from "@/components/agents/edit-agent-modal-simple";
+import { AgentEditOverlay } from "@/components/agents/agent-edit-overlay";
 import { AgentChat } from "@/components/agents/agent-chat-fixed";
 import { Plus, Bot, Play, Pause, Square, Eye, Calendar, Edit } from "lucide-react";
 import { Agent, TaskExecution } from "@shared/schema";
@@ -15,24 +15,18 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Agents() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null);
   const { toast } = useToast();
 
-  // Simple edit handler - no delays or complexity
   const handleEditClick = (agent: Agent) => {
-    console.log('Opening edit modal for:', agent.name);
+    console.log('Edit button clicked for agent:', agent.name);
     setEditingAgent(agent);
-    setEditModalOpen(true);
   };
 
-  const handleEditModalClose = (open: boolean) => {
-    if (!open) {
-      setEditModalOpen(false);
-      setEditingAgent(null);
-    }
+  const handleCloseEdit = () => {
+    setEditingAgent(null);
   };
 
 
@@ -333,6 +327,17 @@ export default function Agents() {
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
+                            handleEditClick(agent);
+                          }}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             startExecutionMutation.mutate(agent.id);
                             setSelectedAgent(agent);
                           }}
@@ -356,10 +361,9 @@ export default function Agents() {
         onOpenChange={setCreateModalOpen} 
       />
 
-      <EditAgentModal
-        open={editModalOpen}
-        onOpenChange={handleEditModalClose}
+      <AgentEditOverlay
         agent={editingAgent}
+        onClose={handleCloseEdit}
       />
     </div>
   );
